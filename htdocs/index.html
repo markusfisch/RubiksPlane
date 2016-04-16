@@ -94,7 +94,15 @@ var D = document,
 	factor,
 	pointersLength,
 	pointersX = [],
-	pointersY = []
+	pointersY = [],
+	tileSize,
+	maxColsInView,
+	maxRowsInView,
+	map = [],
+	mapCols,
+	mapRows,
+	viewX,
+	viewY
 
 function drawSprite( sprite, x, y, wm, hm )
 {
@@ -140,6 +148,25 @@ function drawSprite( sprite, x, y, wm, hm )
 	gl.drawArrays( gl.TRIANGLE_STRIP, 0, 4 )
 }
 
+function drawMap()
+{
+	var cl = M.max( 0, -1+viewX )/tileSize | 0,
+		cr = M.min( cl+maxColsInView, mapCols ),
+		rt = M.max( 0, viewY-yMax )/tileSize | 0,
+		rb = M.min( rt+maxRowsInView, mapRows ),
+		offset = rt*mapCols+cl,
+		skip = mapCols-(cr-cl),
+		l = -viewX+cl*tileSize,
+		t = viewY-rt*tileSize
+
+	for( var y = t, r = rt; r < rb; y -= tileSize, ++r, offset += skip )
+		for( var x = l, c = cl; c < cr; x += tileSize, ++c, ++offset )
+			drawSprite(
+				map[offset].sprite,
+				x,
+				y )
+}
+
 function draw()
 {
 	gl.clear(
@@ -148,9 +175,9 @@ function draw()
 
 	gl.useProgram( program )
 
-	var sprite = sprites[TEST]
+	drawMap()
 
-	drawSprite( sprite, 0, 0 )
+	var sprite = sprites[TEST]
 
 	if( pointersLength > 0 )
 	{
@@ -238,6 +265,24 @@ function pointerDown( event )
 	setPointer( event, true )
 }
 
+function initMap( cols, rows )
+{
+	var offset = 0
+
+	for( var r = 0; r < rows; ++r )
+		for( var c = 0; c < cols; ++c, ++offset )
+		{
+			var id = TEST
+
+			map[offset] = {
+				id: id,
+				sprite: sprites[id] }
+		}
+
+	mapCols = cols
+	mapRows = rows
+}
+
 function scale( sprite )
 {
 	var size = sprite.size*scaleFactor
@@ -267,9 +312,15 @@ function resize()
 
 	gl.viewport( 0, 0, width, height )
 
+	var ref = sprites[TEST].size
 	scaleFactor =
 		M.max( 1/centerX, yMax/centerY )*
-		M.round( width*.05/sprites[TEST].size )
+		M.round( width*.05/ref )
+	tileSize = scaleFactor*2*ref
+	maxColsInView = (2/tileSize | 0)+3
+	maxRowsInView = ((yMax+yMax)/tileSize | 0)+3
+	viewX = mapCols/2*tileSize-tileSize/2
+	viewY = mapRows/2*tileSize-tileSize/2
 
 	for( var id in sprites )
 		scale( sprites[id] )
@@ -484,6 +535,8 @@ function init()
 
 	initBuffers( program )
 	cacheUniformLocations( program )
+
+	initMap( 4, 4 )
 
 	W.onresize = resize
 	resize()
