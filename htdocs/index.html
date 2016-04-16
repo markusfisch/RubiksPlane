@@ -111,6 +111,8 @@ var D = document,
 	mapRows,
 	mapRight,
 	mapBottom,
+	moveBoundX,
+	moveBoundY,
 	playerX,
 	playerY
 
@@ -184,10 +186,6 @@ function draw()
 
 	gl.useProgram( program )
 
-var a = now*.002
-mapX += M.cos( a )*.002
-mapY += M.sin( a )*.002
-
 	drawMap()
 
 	drawSprite(
@@ -201,10 +199,11 @@ function input()
 	if( pointersLength < 1 )
 		return;
 
-	var dx = mapX+playerX-pointersX[0],
-		dy = mapY+playerY-pointersY[0]
-
-	var speed = .02*factor,
+	var px = mapX+playerX,
+		py = mapY+playerY,
+		dx = px-pointersX[0],
+		dy = py-pointersY[0],
+		speed = .02*factor,
 		sprite = sprites[FACE],
 		halfTile = tileSize/2,
 		mx = halfTile-sprite.w,
@@ -223,6 +222,16 @@ function input()
 		playerY = M.min( my, playerY )
 		playerY = M.max( mapBottom-my, playerY )
 	}
+
+	if( px < -moveBoundX )
+		mapX -= px+moveBoundX
+	else if( px > moveBoundX )
+		mapX -= px-moveBoundX
+
+	if( py < -moveBoundY )
+		mapY -= py+moveBoundY
+	else if( py > moveBoundY )
+		mapY -= py-moveBoundY
 }
 
 function run()
@@ -354,10 +363,12 @@ function resize()
 		M.max( 1/centerX, yMax/centerY )*
 		M.round( width*.05/ref )
 	tileSize = scaleFactor*2*ref
-	horizonX = 1+tileSize/2;
-	horizonY = yMax+tileSize/2;
+	horizonX = 1+tileSize/2
+	horizonY = yMax+tileSize/2
+	moveBoundX = .6
+	moveBoundY = moveBoundX*yMax
 
-	initMap( 4, 4 )
+	initMap( 16, 16 )
 
 	playerX = (mapCols-1)/2*tileSize
 	playerY = -(mapRows-1)/2*tileSize
