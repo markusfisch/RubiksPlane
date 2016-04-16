@@ -75,6 +75,7 @@ var D = document,
 	TEXTURE = "texture",
 	TILE_A = 0,
 	TILE_B = 1,
+	FACE = 2,
 	atlas,
 	sprites = [],
 	canvas,
@@ -100,12 +101,14 @@ var D = document,
 	pointersX = [],
 	pointersY = [],
 	tileSize,
-	map = [],
-	mapLength,
 	horizonX,
 	horizonY,
-	viewX,
-	viewY
+	map = [],
+	mapLength,
+	mapLeft,
+	mapTop,
+	mapCols,
+	mapRows
 
 function drawSprite( sprite, x, y, wm, hm )
 {
@@ -156,8 +159,8 @@ function drawMap()
 	for( var t = mapLength; t--; )
 	{
 		var tile = map[t],
-			x = tile.x+viewX,
-			y = tile.y+viewY
+			x = tile.x+mapLeft,
+			y = tile.y+mapTop
 
 		if( x < -horizonX ||
 			x > horizonX ||
@@ -177,13 +180,9 @@ function draw()
 
 	gl.useProgram( program )
 
-	var a = now*.002
-	viewX += M.cos( a )*.005*factor
-	viewY += M.sin( a )*.005*factor
-
 	drawMap()
 
-	var sprite = sprites[TILE_A]
+	var sprite = sprites[FACE]
 
 	if( pointersLength > 0 )
 	{
@@ -288,8 +287,10 @@ function initMap( cols, rows )
 		}
 
 	mapLength = cols*rows
-	viewX = (cols-1)/2*-tileSize
-	viewY = -(rows-1)/2*-tileSize
+	mapLeft = (cols-1)/2*-tileSize
+	mapTop = -(rows-1)/2*-tileSize
+	mapCols = cols
+	mapRows = rows
 }
 
 function scale( sprite )
@@ -329,7 +330,7 @@ function resize()
 	horizonX = 1+tileSize/2;
 	horizonY = yMax+tileSize/2;
 
-	initMap( 16, 16 )
+	initMap( 4, 4 )
 
 	for( var id in sprites )
 		scale( sprites[id] )
@@ -360,6 +361,7 @@ function calculateSpriteRects()
 	var res = [
 			TILE_A, {/*tile_a*/x:38,y:2,w:32,h:32},
 			TILE_B, {/*tile_b*/x:2,y:2,w:32,h:32},
+			FACE, {/*face*/x:74,y:2,w:13,h:20},
 		],
 		positions = [],
 		xf = 1/atlas.width,
