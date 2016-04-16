@@ -97,7 +97,7 @@ var D = document,
 	last,
 	now,
 	factor,
-	pointersLength,
+	pointersLength = 0,
 	pointersX = [],
 	pointersY = [],
 	tileSize,
@@ -105,10 +105,14 @@ var D = document,
 	horizonY,
 	map = [],
 	mapLength,
-	mapLeft,
-	mapTop,
+	mapX,
+	mapY,
 	mapCols,
-	mapRows
+	mapRows,
+	mapRight,
+	mapBottom,
+	playerX,
+	playerY
 
 function drawSprite( sprite, x, y, wm, hm )
 {
@@ -159,8 +163,8 @@ function drawMap()
 	for( var t = mapLength; t--; )
 	{
 		var tile = map[t],
-			x = tile.x+mapLeft,
-			y = tile.y+mapTop
+			x = tile.x+mapX,
+			y = tile.y+mapY
 
 		if( x < -horizonX ||
 			x > horizonX ||
@@ -180,26 +184,45 @@ function draw()
 
 	gl.useProgram( program )
 
+var a = now*.002
+mapX += M.cos( a )*.002
+mapY += M.sin( a )*.002
+
 	drawMap()
 
-	var sprite = sprites[FACE]
+	drawSprite(
+		sprites[FACE],
+		mapX+playerX,
+		mapY+playerY )
+}
 
-	if( pointersLength > 0 )
+function input()
+{
+	if( pointersLength < 1 )
+		return;
+
+	var dx = mapX+playerX-pointersX[0],
+		dy = mapY+playerY-pointersY[0]
+
+	var speed = .02*factor,
+		sprite = sprites[FACE],
+		halfTile = tileSize/2,
+		mx = halfTile-sprite.w,
+		my = halfTile-sprite.h
+
+	if( M.abs( dx ) > halfTile )
 	{
-		for( var n = pointersLength; n--; )
-			drawSprite(
-				sprite,
-				pointersX[n],
-				pointersY[n] )
-	}
-	else
-	{
-		drawSprite(
-			sprite,
-			M.sin( now*.002 ),
-			M.cos( now*.007 )*.2 )
+		playerX += dx > 0 ? -speed : speed
+		playerX = M.max( -mx, playerX )
+		playerX = M.min( mapRight+mx, playerX )
 	}
 
+	if( M.abs( dy ) > halfTile )
+	{
+		playerY += dy > 0 ? -speed : speed
+		playerY = M.min( my, playerY )
+		playerY = M.max( mapBottom-my, playerY )
+	}
 }
 
 function run()
@@ -210,6 +233,7 @@ function run()
 	factor = (now-last)/16
 	last = now
 
+	input()
 	draw()
 }
 
@@ -287,10 +311,13 @@ function initMap( cols, rows )
 		}
 
 	mapLength = cols*rows
-	mapLeft = (cols-1)/2*-tileSize
-	mapTop = -(rows-1)/2*-tileSize
+	mapX = (cols-1)/2*-tileSize
+	mapY = -(rows-1)/2*-tileSize
 	mapCols = cols
 	mapRows = rows
+
+	mapBottom = -(mapRows-1)*tileSize
+	mapRight = (mapCols-1)*tileSize
 }
 
 function scale( sprite )
@@ -331,6 +358,9 @@ function resize()
 	horizonY = yMax+tileSize/2;
 
 	initMap( 4, 4 )
+
+	playerX = (mapCols-1)/2*tileSize
+	playerY = -(mapRows-1)/2*tileSize
 
 	for( var id in sprites )
 		scale( sprites[id] )
