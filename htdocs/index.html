@@ -73,7 +73,8 @@ var D = document,
 	PERSPECTIVE = "perspective",
 	TRANSFORMATION = "transformation",
 	TEXTURE = "texture",
-	TEST = 0,
+	TILE_A = 0,
+	TILE_B = 1,
 	atlas,
 	sprites = [],
 	canvas,
@@ -99,11 +100,10 @@ var D = document,
 	pointersX = [],
 	pointersY = [],
 	tileSize,
-	maxColsInView,
-	maxRowsInView,
 	map = [],
-	mapCols,
-	mapRows,
+	mapLength,
+	horizonX,
+	horizonY,
 	viewX,
 	viewY
 
@@ -153,21 +153,20 @@ function drawSprite( sprite, x, y, wm, hm )
 
 function drawMap()
 {
-	var cl = M.max( 0, -1+viewX )/tileSize | 0,
-		cr = M.min( cl+maxColsInView, mapCols ),
-		rt = M.max( 0, viewY-yMax )/tileSize | 0,
-		rb = M.min( rt+maxRowsInView, mapRows ),
-		offset = rt*mapCols+cl,
-		skip = mapCols-(cr-cl),
-		l = -viewX+cl*tileSize,
-		t = viewY-rt*tileSize
+	for( var t = mapLength; t--; )
+	{
+		var tile = map[t],
+			x = tile.x+viewX,
+			y = tile.y+viewY
 
-	for( var y = t, r = rt; r < rb; y -= tileSize, ++r, offset += skip )
-		for( var x = l, c = cl; c < cr; x += tileSize, ++c, ++offset )
-			drawSprite(
-				map[offset].sprite,
-				x,
-				y )
+		if( x < -horizonX ||
+			x > horizonX ||
+			y < -horizonY ||
+			y > horizonY )
+			continue
+
+		drawSprite( tile.sprite, x, y )
+	}
 }
 
 function draw()
@@ -178,9 +177,13 @@ function draw()
 
 	gl.useProgram( program )
 
+	var a = now*.002
+	viewX += M.cos( a )*.005*factor
+	viewY += M.sin( a )*.005*factor
+
 	drawMap()
 
-	var sprite = sprites[TEST]
+	var sprite = sprites[TILE_A]
 
 	if( pointersLength > 0 )
 	{
@@ -272,18 +275,21 @@ function initMap( cols, rows )
 {
 	var offset = 0
 
-	for( var r = 0; r < rows; ++r )
-		for( var c = 0; c < cols; ++c, ++offset )
+	for( var r = 0, y = 0; r < rows; ++r, y -= tileSize )
+		for( var c = 0, x = 0; c < cols; ++c, x += tileSize, ++offset )
 		{
-			var id = TEST
+			var id = (c+r) % 2 == 1 ? TILE_A : TILE_B
 
 			map[offset] = {
 				id: id,
+				x: x,
+				y: y,
 				sprite: sprites[id] }
 		}
 
-	mapCols = cols
-	mapRows = rows
+	mapLength = cols*rows
+	viewX = (cols-1)/2*-tileSize
+	viewY = -(rows-1)/2*-tileSize
 }
 
 function scale( sprite )
@@ -315,15 +321,15 @@ function resize()
 
 	gl.viewport( 0, 0, width, height )
 
-	var ref = sprites[TEST].size
+	var ref = sprites[TILE_A].size
 	scaleFactor =
 		M.max( 1/centerX, yMax/centerY )*
 		M.round( width*.05/ref )
 	tileSize = scaleFactor*2*ref
-	maxColsInView = (2/tileSize | 0)+3
-	maxRowsInView = ((yMax+yMax)/tileSize | 0)+3
-	viewX = mapCols/2*tileSize-tileSize/2
-	viewY = mapRows/2*tileSize-tileSize/2
+	horizonX = 1+tileSize/2;
+	horizonY = yMax+tileSize/2;
+
+	initMap( 16, 16 )
 
 	for( var id in sprites )
 		scale( sprites[id] )
@@ -352,7 +358,8 @@ function cacheUniformLocations( program )
 function calculateSpriteRects()
 {
 	var res = [
-			TEST, {/*test*/x:2,y:2,w:32,h:32},
+			TILE_A, {/*tile_a*/x:38,y:2,w:32,h:32},
+			TILE_B, {/*tile_b*/x:2,y:2,w:32,h:32},
 		],
 		positions = [],
 		xf = 1/atlas.width,
@@ -538,12 +545,10 @@ function init()
 
 	gl.enable( gl.BLEND )
 	gl.blendFunc( gl.ONE, gl.ONE_MINUS_SRC_ALPHA )
-	gl.clearColor( .8, .4, .2, 1 )
+	gl.clearColor( .4, .2, .3, 1 )
 
 	initBuffers( program )
 	cacheUniformLocations( program )
-
-	initMap( 4, 4 )
 
 	W.onresize = resize
 	resize()
