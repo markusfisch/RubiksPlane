@@ -70,6 +70,9 @@ void main()
 var D = document,
 	M = Math,
 	W = window,
+	PERSPECTIVE = "perspective",
+	TRANSFORMATION = "transformation",
+	TEXTURE = "texture",
 	TEST = 0,
 	atlas,
 	sprites = [],
@@ -125,7 +128,7 @@ function drawSprite( sprite, x, y, wm, hm )
 		sprite.index << 5 )
 
 	gl.uniformMatrix3fv(
-		program.uniforms["perspective"],
+		program.uniforms[PERSPECTIVE],
 		gl.FALSE,
 		perspective )
 
@@ -137,13 +140,13 @@ function drawSprite( sprite, x, y, wm, hm )
 	transformation[7] = y
 
 	gl.uniformMatrix3fv(
-		program.uniforms["transformation"],
+		program.uniforms[TRANSFORMATION],
 		gl.FALSE,
 		transformation )
 
 	gl.activeTexture( gl.TEXTURE0 )
 	gl.bindTexture( gl.TEXTURE_2D, texture )
-	gl.uniform1i( program.uniforms["texture"], 0 )
+	gl.uniform1i( program.uniforms[TEXTURE], 0 )
 
 	gl.drawArrays( gl.TRIANGLE_STRIP, 0, 4 )
 }
@@ -326,20 +329,24 @@ function resize()
 		scale( sprites[id] )
 }
 
-function cacheUniformLocation( program, name )
+function cacheUniformLocations( program )
 {
 	if( program.uniforms === undefined )
 		program.uniforms = {}
 
-	program.uniforms[name] =
-		gl.getUniformLocation( program, name )
-}
+	var names = [
+		PERSPECTIVE,
+		TRANSFORMATION,
+		TEXTURE,
+	]
 
-function cacheUniformLocations( program )
-{
-	cacheUniformLocation( program, "perspective" )
-	cacheUniformLocation( program, "transformation" )
-	cacheUniformLocation( program, "texture" )
+	for( var idx in names )
+	{
+		var name = names[idx]
+
+		program.uniforms[name] =
+			gl.getUniformLocation( program, name )
+	}
 }
 
 function calculateSpriteRects()
