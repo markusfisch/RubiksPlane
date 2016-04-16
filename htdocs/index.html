@@ -73,6 +73,7 @@ var D = document,
 	PERSPECTIVE = "perspective",
 	TRANSFORMATION = "transformation",
 	TEXTURE = "texture",
+	SHIFT_TIME = 100,
 	TILE_A = 0,
 	TILE_B = 1,
 	FACE = 2,
@@ -97,6 +98,10 @@ var D = document,
 	last,
 	now,
 	factor,
+	shaking = false,
+	playerScreenX,
+	playerScreenY,
+	keysDown = [],
 	pointersLength = 0,
 	pointersX = [],
 	pointersY = [],
@@ -109,8 +114,6 @@ var D = document,
 	mapY,
 	mapCols,
 	mapRows,
-	mapRight,
-	mapBottom,
 	moveBoundX,
 	moveBoundY,
 	playerX,
@@ -160,13 +163,60 @@ function drawSprite( sprite, x, y, wm, hm )
 	gl.drawArrays( gl.TRIANGLE_STRIP, 0, 4 )
 }
 
+function linearTween( t, b, c, d )
+{
+	return c*t/d+b
+}
+
 function drawMap()
 {
-	for( var t = mapLength; t--; )
+	for( var n = mapLength; n--; )
 	{
-		var tile = map[t],
+		var tile = map[n],
 			x = tile.x+mapX,
 			y = tile.y+mapY
+
+		if( tile.col != tile.toCol )
+		{
+			var t = now-tile.startX
+
+			x = linearTween(
+				t,
+				tile.fromX,
+				tile.shiftX,
+				SHIFT_TIME )
+
+			if( x >= tile.toX ||
+				t >= SHIFT_TIME )
+			{
+				tile.col = tile.toCol
+				tile.x = tile.toX
+			}
+
+			x += mapX
+			shaking = true
+		}
+
+		if( tile.row != tile.toRow )
+		{
+			var t = now-tile.startY
+
+			y = linearTween(
+				t,
+				tile.fromY,
+				tile.shiftY,
+				SHIFT_TIME )
+
+			if( y >= tile.toY ||
+				t >= SHIFT_TIME )
+			{
+				tile.row = tile.toRow
+				tile.y = tile.toY
+			}
+
+			y += mapY
+			shaking = true
+		}
 
 		if( x < -horizonX ||
 			x > horizonX ||
@@ -187,51 +237,178 @@ function draw()
 	gl.useProgram( program )
 
 	drawMap()
-
 	drawSprite(
 		sprites[FACE],
-		mapX+playerX,
-		mapY+playerY )
+		playerScreenX,
+		playerScreenY )
+}
+
+function alignMap()
+{
+	if( playerScreenX < -moveBoundX )
+		mapX -= playerScreenX+moveBoundX
+	else if( playerScreenX > moveBoundX )
+		mapX -= playerScreenX-moveBoundX
+
+	if( playerScreenY < -moveBoundY )
+		mapY -= playerScreenY+moveBoundY
+	else if( playerScreenY > moveBoundY )
+		mapY -= playerScreenY-moveBoundY
+}
+
+function shiftRow( row, count )
+{
+	var shift = count*tileSize,
+		valid = false
+
+	for( var n = mapLength; n--; )
+	{
+		var tile = map[n]
+
+		if( tile.toCol == tile.col &&
+			tile.row == row )
+		{
+			var col = tile.col+count
+
+			if( col > -1 &&
+				col < mapCols )
+			{
+				valid = true
+				break
+			}
+		}
+	}
+
+	if( !valid )
+		return
+
+	if( M.round( -playerY/tileSize ) == row )
+	{
+		playerX += shift
+		alignMap()
+	}
+
+	for( var n = mapLength; n--; )
+	{
+		var tile = map[n]
+
+		if( tile.row == row )
+		{
+			tile.startX = now
+			tile.fromX = tile.x
+			tile.shiftX = shift
+			tile.toX = tile.x+shift
+			tile.toCol = tile.col+count
+		}
+	}
+}
+
+function shiftCol( col, count )
+{
+	var shift = count*tileSize,
+		valid = false
+
+	for( var n = mapLength; n--; )
+	{
+		var tile = map[n]
+
+		if( tile.toRow == tile.row &&
+			tile.col == col )
+		{
+			var row = tile.row-count
+
+			if( row > -1 &&
+				row < mapRows )
+			{
+				valid = true
+				break
+			}
+		}
+	}
+
+	if( !valid )
+		return
+
+	if( M.round( playerX/tileSize ) == col )
+	{
+		playerY += shift
+		alignMap()
+	}
+
+	for( var n = mapLength; n--; )
+	{
+		var tile = map[n]
+
+		if( tile.col == col )
+		{
+			tile.startY = now
+			tile.fromY = tile.y
+			tile.shiftY = shift
+			tile.toY = tile.y+shift
+			tile.toRow = tile.row-count
+		}
+	}
+}
+
+function onTile( x, y )
+{
+	var halfTile = tileSize/2
+
+	for( var n = mapLength; n--; )
+	{
+		var tile = map[n],
+			dx = x-tile.x,
+			dy = y-tile.y
+
+		if( M.abs( dx ) < halfTile &&
+			M.abs( dy ) < halfTile )
+			return n
+	}
+
+	return -1
 }
 
 function input()
 {
 	if( pointersLength < 1 )
-		return;
+		return
 
-	var px = mapX+playerX,
-		py = mapY+playerY,
-		dx = px-pointersX[0],
-		dy = py-pointersY[0],
+	var dx = playerScreenX-pointersX[0],
+		dy = playerScreenY-pointersY[0],
 		speed = .02*factor,
-		sprite = sprites[FACE],
-		halfTile = tileSize/2,
-		mx = halfTile-sprite.w,
-		my = halfTile-sprite.h
+		move = tileSize*.15
 
-	if( M.abs( dx ) > halfTile )
-	{
+	if( M.abs( dx ) > move )
 		playerX += dx > 0 ? -speed : speed
-		playerX = M.max( -mx, playerX )
-		playerX = M.min( mapRight+mx, playerX )
-	}
 
-	if( M.abs( dy ) > halfTile )
-	{
+	if( M.abs( dy ) > move )
 		playerY += dy > 0 ? -speed : speed
-		playerY = M.min( my, playerY )
-		playerY = M.max( mapBottom-my, playerY )
+
+	var n;
+	if( (n = onTile( playerX, playerY )) < 0 )
+	{
+		if( M.abs( dx ) > move )
+			playerX -= dx > 0 ? -speed : speed
+
+		if( M.abs( dy ) > move )
+			playerY -= dy > 0 ? -speed : speed
 	}
+	/*else
+	{
+		var tile = map[n],
+			sprite = map.sprite,
+			w = sprite.w,
+			h = sprite.h,
+			tl = tile.x-w,
+			tt = tile.y-h,
+			tr = tile.x+w,
+			tb = tile.y+h
 
-	if( px < -moveBoundX )
-		mapX -= px+moveBoundX
-	else if( px > moveBoundX )
-		mapX -= px-moveBoundX
+		playerX = M.min( tr, M.max( tl, playerX ) )
+		playerY = M.max( tb, M.min( tt, playerY ) )
+	}*/
 
-	if( py < -moveBoundY )
-		mapY -= py+moveBoundY
-	else if( py > moveBoundY )
-		mapY -= py-moveBoundY
+	alignMap()
 }
 
 function run()
@@ -241,6 +418,17 @@ function run()
 	now = Date.now()
 	factor = (now-last)/16
 	last = now
+
+	if( shaking )
+	{
+		var a = now*.15;
+		mapX += M.cos( a )*.005
+		mapY += M.sin( a )*.005
+		shaking = false;
+	}
+
+	playerScreenX = mapX+playerX
+	playerScreenY = mapY+playerY
 
 	input()
 	draw()
@@ -303,19 +491,69 @@ function pointerDown( event )
 	setPointer( event, true )
 }
 
-function initMap( cols, rows )
+function setKey( ev, pressed )
+{
+	var e = ev || event
+
+	if( !pressed )
+	{
+		if( keysDown[37] )
+			shiftRow( 2, -1 )
+		else if( keysDown[39] )
+			shiftRow( 2, 1 )
+
+		if( keysDown[38] )
+			shiftCol( 2, 1 )
+		else if( keysDown[40] )
+			shiftCol( 2, -1 )
+	}
+
+	keysDown[e.keyCode] = pressed
+
+	e.preventDefault()
+	return false
+}
+
+function keyUp( ev )
+{
+	return setKey( ev, false )
+}
+
+function keyDown( ev )
+{
+	return setKey( ev, true )
+}
+
+function initMap( cols, rows, template )
 {
 	var offset = 0
 
 	for( var r = 0, y = 0; r < rows; ++r, y -= tileSize )
 		for( var c = 0, x = 0; c < cols; ++c, x += tileSize, ++offset )
 		{
+			if( template[offset] < 1 )
+			{
+				map[offset] = {
+					x: -2,
+					y: -2,
+					toCol: -1,
+					toRow: -1,
+					col: -1,
+					row: -1 }
+
+				continue
+			}
+
 			var id = (c+r) % 2 == 1 ? TILE_A : TILE_B
 
 			map[offset] = {
 				id: id,
 				x: x,
 				y: y,
+				toCol: c,
+				toRow: r,
+				col: c,
+				row: r,
 				sprite: sprites[id] }
 		}
 
@@ -324,9 +562,6 @@ function initMap( cols, rows )
 	mapY = -(rows-1)/2*-tileSize
 	mapCols = cols
 	mapRows = rows
-
-	mapBottom = -(mapRows-1)*tileSize
-	mapRight = (mapCols-1)*tileSize
 }
 
 function scale( sprite )
@@ -361,14 +596,21 @@ function resize()
 	var ref = sprites[TILE_A].size
 	scaleFactor =
 		M.max( 1/centerX, yMax/centerY )*
-		M.round( width*.05/ref )
+		M.round( width*.025/ref )
 	tileSize = scaleFactor*2*ref
 	horizonX = 1+tileSize/2
 	horizonY = yMax+tileSize/2
 	moveBoundX = .6
 	moveBoundY = moveBoundX*yMax
 
-	initMap( 16, 16 )
+	initMap( 5, 5,
+	[
+		0, 0, 1, 0, 0,
+		0, 1, 1, 1, 0,
+		1, 1, 1, 1, 1,
+		0, 1, 1, 1, 0,
+		0, 0, 1, 0, 0,
+	] )
 
 	playerX = (mapCols-1)/2*tileSize
 	playerY = -(mapRows-1)/2*tileSize
@@ -595,6 +837,9 @@ function init()
 
 	W.onresize = resize
 	resize()
+
+	D.onkeydown = keyDown
+	D.onkeyup = keyUp
 
 	D.onmousedown = pointerDown
 	D.onmousemove = pointerMove
