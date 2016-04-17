@@ -117,6 +117,8 @@ var D = document,
 	mapY,
 	mapCols,
 	mapRows,
+	displaceY,
+	displaceSpeed,
 	lastPointerX,
 	lastPointerY,
 	shiftThresholdX,
@@ -440,11 +442,16 @@ function drawTarget()
 
 function drawMap()
 {
+	var offsetY = mapY+displaceY
+
+	if( displaceY > 0 )
+		displaceY = M.max( 0, displaceY-displaceSpeed );
+
 	for( var n = mapLength; n--; )
 	{
 		var tile = map[n],
 			x = tile.x+mapX,
-			y = tile.y+mapY
+			y = tile.y+offsetY
 
 		if( x < -horizonX ||
 			x > horizonX ||
@@ -481,6 +488,7 @@ function run()
 
 function loadLevel()
 {
+	displaceY = 1
 	levels[level % levels.length]()
 }
 
@@ -847,6 +855,7 @@ function resize()
 	horizonY = yMax+tileSize/2
 	shiftThresholdX = .005
 	shiftThresholdY = shiftThresholdX*yMax
+	displaceSpeed = tileSize*.3
 
 	var margin = tileSize*.4
 	targetX = -1+margin
