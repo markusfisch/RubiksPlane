@@ -111,11 +111,14 @@ var D = document,
 	mapY,
 	mapCols,
 	mapRows,
+	lastPointerX,
+	lastPointerY,
+	shiftThresholdX,
+	shiftThresholdY,
+	dragging = false,
 	shifting = false,
-	shiftLastX,
-	shiftLastY,
-	shiftAtCol,
-	shiftAtRow,
+	shiftCol,
+	shiftRow,
 	shiftDirection
 
 function drawSprite( sprite, x, y, wm, hm )
@@ -202,6 +205,16 @@ function run()
 	draw()
 }
 
+function predictableRound( value )
+{
+	var f = M.abs( value-M.floor( value ) )
+
+	if( f > .4 && f < .6 )
+		value += .1
+
+	return M.round( value )
+}
+
 function lockCol( col )
 {
 	for( var n = mapLength; n--; )
@@ -210,7 +223,7 @@ function lockCol( col )
 
 		if( tile.col == col )
 		{
-			tile.row = M.round( -tile.y/tileSize )
+			tile.row = predictableRound( -tile.y/tileSize )
 			tile.y = tile.row*-tileSize
 		}
 	}
@@ -224,7 +237,7 @@ function lockRow( row )
 
 		if( tile.row == row )
 		{
-			tile.col = M.round( tile.x/tileSize )
+			tile.col = predictableRound( tile.x/tileSize )
 			tile.x = tile.col*tileSize
 		}
 	}
@@ -270,44 +283,63 @@ function tileAt( x, y )
 
 function stopShift()
 {
-	if( shiftDirection )
-		lockRow( shiftAtRow )
-	else
-		lockCol( shiftAtCol )
+	if( shifting )
+	{
+		if( shiftDirection )
+			lockRow( shiftRow )
+		else
+			lockCol( shiftCol )
+	}
 
 	shifting = false
+	dragging = false
 }
 
 function shift( x, y )
 {
-	var dx = x-shiftLastX,
-		dy = y-shiftLastY
+	var dx = x-lastPointerX,
+		dy = y-lastPointerY
 
-	shiftLastX = x
-	shiftLastY = y
+	if( M.abs( dx ) < shiftThresholdX &&
+		M.abs( dy ) < shiftThresholdY )
+		return
 
-	if( shiftDirection < 0 )
-		shiftDirection = M.abs( dx ) > M.abs( dy )
+	lastPointerX = x
+	lastPointerY = y
 
-	if( shiftDirection )
-		shiftRowBy( shiftAtRow, dx )
-	else
-		shiftColBy( shiftAtCol, dy )
+	if( shifting )
+	{
+		if( shiftDirection < 0 )
+			shiftDirection = M.abs( dx ) > M.abs( dy )
+
+		if( shiftDirection )
+			shiftRowBy( shiftRow, dx )
+		else
+			shiftColBy( shiftCol, dy )
+	}
+	else if( dragging )
+	{
+		mapX += dx
+		mapY += dy
+	}
 }
 
 function startShift( x, y )
 {
 	var tile = tileAt( x-mapX, y-mapY )
 
+	lastPointerX = x
+	lastPointerY = y
+
 	if( tile )
 	{
-		shiftLastX = x
-		shiftLastY = y
-		shiftAtCol = tile.col
-		shiftAtRow = tile.row
+		shiftCol = tile.col
+		shiftRow = tile.row
 		shiftDirection = -1
 		shifting = true
 	}
+	else
+		dragging = true
 }
 
 function pageXToGl( x )
@@ -354,18 +386,14 @@ function setPointer( event, down )
 
 function pointerUp( event )
 {
-	if( shifting )
-		stopShift()
-
+	stopShift()
 	setPointer( event, false )
 }
 
 function pointerMove( event )
 {
 	setPointer( event, pointersLength )
-
-	if( shifting )
-		shift( pointersX[0], pointersY[0] )
+	shift( pointersX[0], pointersY[0] )
 }
 
 function pointerDown( event )
@@ -467,6 +495,8 @@ function resize()
 	halfTileSize = tileSize*.5
 	horizonX = 1+tileSize/2
 	horizonY = yMax+tileSize/2
+	shiftThresholdX = .005
+	shiftThresholdY = shiftThresholdX*yMax
 
 	initMap( 5, 5,
 	[
