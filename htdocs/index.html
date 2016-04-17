@@ -601,7 +601,7 @@ function resize()
 	gl.viewport( 0, 0, width, height )
 
 	var ref = sprites[TILE_A].size
-	scaleFactor = .5/halfWidth*M.ceil( M.min( width, height )/16/ref )
+	scaleFactor = .5/halfWidth*M.ceil( M.min( width, height )/8/ref )
 	tileSize = scaleFactor*2*ref
 	halfTileSize = tileSize*.5
 	horizonX = 1+tileSize/2
