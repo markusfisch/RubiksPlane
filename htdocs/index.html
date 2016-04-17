@@ -73,7 +73,6 @@ var D = document,
 	PERSPECTIVE = "perspective",
 	TRANSFORMATION = "transformation",
 	TEXTURE = "texture",
-	SHIFT_TIME = 100,
 	TILE_A = 0,
 	TILE_B = 1,
 	FACE = 2,
@@ -91,21 +90,19 @@ var D = document,
 	program,
 	width,
 	height,
-	centerX,
-	centerY,
+	halfWidth,
+	halfHeight,
 	yMax,
 	scaleFactor,
 	last,
 	now,
 	factor,
-	shaking = false,
-	playerScreenX,
-	playerScreenY,
 	keysDown = [],
 	pointersLength = 0,
 	pointersX = [],
 	pointersY = [],
 	tileSize,
+	halfTileSize,
 	horizonX,
 	horizonY,
 	map = [],
@@ -114,10 +111,12 @@ var D = document,
 	mapY,
 	mapCols,
 	mapRows,
-	moveBoundX,
-	moveBoundY,
-	playerX,
-	playerY
+	shifting = false,
+	shiftLastX,
+	shiftLastY,
+	shiftAtCol,
+	shiftAtRow,
+	shiftDirection
 
 function drawSprite( sprite, x, y, wm, hm )
 {
@@ -163,11 +162,6 @@ function drawSprite( sprite, x, y, wm, hm )
 	gl.drawArrays( gl.TRIANGLE_STRIP, 0, 4 )
 }
 
-function linearTween( t, b, c, d )
-{
-	return c*t/d+b
-}
-
 function drawMap()
 {
 	for( var n = mapLength; n--; )
@@ -175,48 +169,6 @@ function drawMap()
 		var tile = map[n],
 			x = tile.x+mapX,
 			y = tile.y+mapY
-
-		if( tile.col != tile.toCol )
-		{
-			var t = now-tile.startX
-
-			x = linearTween(
-				t,
-				tile.fromX,
-				tile.shiftX,
-				SHIFT_TIME )
-
-			if( x >= tile.toX ||
-				t >= SHIFT_TIME )
-			{
-				tile.col = tile.toCol
-				tile.x = tile.toX
-			}
-
-			x += mapX
-			shaking = true
-		}
-
-		if( tile.row != tile.toRow )
-		{
-			var t = now-tile.startY
-
-			y = linearTween(
-				t,
-				tile.fromY,
-				tile.shiftY,
-				SHIFT_TIME )
-
-			if( y >= tile.toY ||
-				t >= SHIFT_TIME )
-			{
-				tile.row = tile.toRow
-				tile.y = tile.toY
-			}
-
-			y += mapY
-			shaking = true
-		}
 
 		if( x < -horizonX ||
 			x > horizonX ||
@@ -237,178 +189,6 @@ function draw()
 	gl.useProgram( program )
 
 	drawMap()
-	drawSprite(
-		sprites[FACE],
-		playerScreenX,
-		playerScreenY )
-}
-
-function alignMap()
-{
-	if( playerScreenX < -moveBoundX )
-		mapX -= playerScreenX+moveBoundX
-	else if( playerScreenX > moveBoundX )
-		mapX -= playerScreenX-moveBoundX
-
-	if( playerScreenY < -moveBoundY )
-		mapY -= playerScreenY+moveBoundY
-	else if( playerScreenY > moveBoundY )
-		mapY -= playerScreenY-moveBoundY
-}
-
-function shiftRow( row, count )
-{
-	var shift = count*tileSize,
-		valid = false
-
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n]
-
-		if( tile.toCol == tile.col &&
-			tile.row == row )
-		{
-			var col = tile.col+count
-
-			if( col > -1 &&
-				col < mapCols )
-			{
-				valid = true
-				break
-			}
-		}
-	}
-
-	if( !valid )
-		return
-
-	if( M.round( -playerY/tileSize ) == row )
-	{
-		playerX += shift
-		alignMap()
-	}
-
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n]
-
-		if( tile.row == row )
-		{
-			tile.startX = now
-			tile.fromX = tile.x
-			tile.shiftX = shift
-			tile.toX = tile.x+shift
-			tile.toCol = tile.col+count
-		}
-	}
-}
-
-function shiftCol( col, count )
-{
-	var shift = count*tileSize,
-		valid = false
-
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n]
-
-		if( tile.toRow == tile.row &&
-			tile.col == col )
-		{
-			var row = tile.row-count
-
-			if( row > -1 &&
-				row < mapRows )
-			{
-				valid = true
-				break
-			}
-		}
-	}
-
-	if( !valid )
-		return
-
-	if( M.round( playerX/tileSize ) == col )
-	{
-		playerY += shift
-		alignMap()
-	}
-
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n]
-
-		if( tile.col == col )
-		{
-			tile.startY = now
-			tile.fromY = tile.y
-			tile.shiftY = shift
-			tile.toY = tile.y+shift
-			tile.toRow = tile.row-count
-		}
-	}
-}
-
-function onTile( x, y )
-{
-	var halfTile = tileSize/2
-
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n],
-			dx = x-tile.x,
-			dy = y-tile.y
-
-		if( M.abs( dx ) < halfTile &&
-			M.abs( dy ) < halfTile )
-			return n
-	}
-
-	return -1
-}
-
-function input()
-{
-	if( pointersLength < 1 )
-		return
-
-	var dx = playerScreenX-pointersX[0],
-		dy = playerScreenY-pointersY[0],
-		speed = .02*factor,
-		move = tileSize*.15
-
-	if( M.abs( dx ) > move )
-		playerX += dx > 0 ? -speed : speed
-
-	if( M.abs( dy ) > move )
-		playerY += dy > 0 ? -speed : speed
-
-	var n;
-	if( (n = onTile( playerX, playerY )) < 0 )
-	{
-		if( M.abs( dx ) > move )
-			playerX -= dx > 0 ? -speed : speed
-
-		if( M.abs( dy ) > move )
-			playerY -= dy > 0 ? -speed : speed
-	}
-	/*else
-	{
-		var tile = map[n],
-			sprite = map.sprite,
-			w = sprite.w,
-			h = sprite.h,
-			tl = tile.x-w,
-			tt = tile.y-h,
-			tr = tile.x+w,
-			tb = tile.y+h
-
-		playerX = M.min( tr, M.max( tl, playerX ) )
-		playerY = M.max( tb, M.min( tt, playerY ) )
-	}*/
-
-	alignMap()
 }
 
 function run()
@@ -419,29 +199,125 @@ function run()
 	factor = (now-last)/16
 	last = now
 
-	if( shaking )
+	draw()
+}
+
+function lockCol( col )
+{
+	for( var n = mapLength; n--; )
 	{
-		var a = now*.15;
-		mapX += M.cos( a )*.005
-		mapY += M.sin( a )*.005
-		shaking = false;
+		var tile = map[n]
+
+		if( tile.col == col )
+		{
+			tile.row = M.round( -tile.y/tileSize )
+			tile.y = tile.row*-tileSize
+		}
+	}
+}
+
+function lockRow( row )
+{
+	for( var n = mapLength; n--; )
+	{
+		var tile = map[n]
+
+		if( tile.row == row )
+		{
+			tile.col = M.round( tile.x/tileSize )
+			tile.x = tile.col*tileSize
+		}
+	}
+}
+
+function shiftColBy( col, shift )
+{
+	for( var n = mapLength; n--; )
+	{
+		var tile = map[n]
+
+		if( tile.col == col )
+			tile.y += shift
+	}
+}
+
+function shiftRowBy( row, shift )
+{
+	for( var n = mapLength; n--; )
+	{
+		var tile = map[n]
+
+		if( tile.row == row )
+			tile.x += shift
+	}
+}
+
+function tileAt( x, y )
+{
+	for( var n = mapLength; n--; )
+	{
+		var tile = map[n],
+			dx = x-tile.x,
+			dy = y-tile.y
+
+		if( M.abs( dx ) < halfTileSize &&
+			M.abs( dy ) < halfTileSize )
+			return tile
 	}
 
-	playerScreenX = mapX+playerX
-	playerScreenY = mapY+playerY
+	return null
+}
 
-	input()
-	draw()
+function stopShift()
+{
+	if( shiftDirection )
+		lockRow( shiftAtRow )
+	else
+		lockCol( shiftAtCol )
+
+	shifting = false
+}
+
+function shift( x, y )
+{
+	var dx = x-shiftLastX,
+		dy = y-shiftLastY
+
+	shiftLastX = x
+	shiftLastY = y
+
+	if( shiftDirection < 0 )
+		shiftDirection = M.abs( dx ) > M.abs( dy )
+
+	if( shiftDirection )
+		shiftRowBy( shiftAtRow, dx )
+	else
+		shiftColBy( shiftAtCol, dy )
+}
+
+function startShift( x, y )
+{
+	var tile = tileAt( x-mapX, y-mapY )
+
+	if( tile )
+	{
+		shiftLastX = x
+		shiftLastY = y
+		shiftAtCol = tile.col
+		shiftAtRow = tile.row
+		shiftDirection = -1
+		shifting = true
+	}
 }
 
 function pageXToGl( x )
 {
-	return (x-centerX)/centerX
+	return (x-halfWidth)/halfWidth
 }
 
 function pageYToGl( y )
 {
-	return (centerY-y)/(centerY/yMax)
+	return (halfHeight-y)/(halfHeight/yMax)
 }
 
 function setPointer( event, down )
@@ -478,35 +354,31 @@ function setPointer( event, down )
 
 function pointerUp( event )
 {
+	if( shifting )
+		stopShift()
+
 	setPointer( event, false )
 }
 
 function pointerMove( event )
 {
 	setPointer( event, pointersLength )
+
+	if( shifting )
+		shift( pointersX[0], pointersY[0] )
 }
 
 function pointerDown( event )
 {
 	setPointer( event, true )
+
+	if( pointersLength == 1 )
+		startShift( pointersX[0], pointersY[0] )
 }
 
 function setKey( ev, pressed )
 {
 	var e = ev || event
-
-	if( !pressed )
-	{
-		if( keysDown[37] )
-			shiftRow( 2, -1 )
-		else if( keysDown[39] )
-			shiftRow( 2, 1 )
-
-		if( keysDown[38] )
-			shiftCol( 2, 1 )
-		else if( keysDown[40] )
-			shiftCol( 2, -1 )
-	}
 
 	keysDown[e.keyCode] = pressed
 
@@ -531,30 +403,26 @@ function initMap( cols, rows, template )
 	for( var r = 0, y = 0; r < rows; ++r, y -= tileSize )
 		for( var c = 0, x = 0; c < cols; ++c, x += tileSize, ++offset )
 		{
-			if( template[offset] < 1 )
-			{
-				map[offset] = {
-					x: -2,
-					y: -2,
-					toCol: -1,
-					toRow: -1,
-					col: -1,
-					row: -1 }
+			var tile
 
-				continue
+			if( template[offset] < 1 )
+				tile = { x: -2 }
+			else
+			{
+				var id = (c+r) % 2 == 1 ? TILE_A : TILE_B
+
+				tile = {
+					id: id,
+					x: x,
+					y: y,
+					toCol: c,
+					toRow: r,
+					col: c,
+					row: r,
+					sprite: sprites[id] }
 			}
 
-			var id = (c+r) % 2 == 1 ? TILE_A : TILE_B
-
-			map[offset] = {
-				id: id,
-				x: x,
-				y: y,
-				toCol: c,
-				toRow: r,
-				col: c,
-				row: r,
-				sprite: sprites[id] }
+			map[offset] = tile
 		}
 
 	mapLength = cols*rows
@@ -577,8 +445,8 @@ function resize()
 	canvas.width = width = W.innerWidth
 	canvas.height = height = W.innerHeight
 
-	centerX = width >> 1
-	centerY = height >> 1
+	halfWidth = width >> 1
+	halfHeight = height >> 1
 	yMax = height/width
 
 	perspective = new Float32Array( [
@@ -594,14 +462,11 @@ function resize()
 	gl.viewport( 0, 0, width, height )
 
 	var ref = sprites[TILE_A].size
-	scaleFactor =
-		M.max( 1/centerX, yMax/centerY )*
-		M.round( width*.025/ref )
+	scaleFactor = .5/halfWidth*M.ceil( M.min( width, height )/16/ref )
 	tileSize = scaleFactor*2*ref
+	halfTileSize = tileSize*.5
 	horizonX = 1+tileSize/2
 	horizonY = yMax+tileSize/2
-	moveBoundX = .6
-	moveBoundY = moveBoundX*yMax
 
 	initMap( 5, 5,
 	[
@@ -611,9 +476,6 @@ function resize()
 		0, 1, 1, 1, 0,
 		0, 0, 1, 0, 0,
 	] )
-
-	playerX = (mapCols-1)/2*tileSize
-	playerY = -(mapRows-1)/2*tileSize
 
 	for( var id in sprites )
 		scale( sprites[id] )
