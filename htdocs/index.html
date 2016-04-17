@@ -59,7 +59,14 @@ uniform sampler2D texture;
 
 void main()
 {
-	gl_FragColor = texture2D( texture, textureUV.st ).rgba;
+	vec4 color = texture2D( texture, textureUV.st ).rgba;
+
+	color = mix(
+		color,
+		vec4( .1, .2, .3, 1. ),
+		abs( sin( length( textureUV.st )*2048. )*.15 ) );
+
+	gl_FragColor = color;
 }
 
 </script>
@@ -131,22 +138,15 @@ var D = document,
 	levels = [
 		function()
 		{
-			initMap( 5, 5,
+			initMap( 2, 2,
 			[
-				0, 0, 1, 0, 0,
-				0, 1, 2, 1, 0,
-				1, 2, 1, 2, 1,
-				0, 1, 2, 1, 0,
-				0, 0, 1, 0, 0,
+				1, 0,
+				2, 1,
 			] )
 
-			initTarget( 5,
+			initTarget( 3,
 			[
-				0, 1, 0, 0, 0,
-				0, 1, 2, 1, 0,
-				1, 2, 1, 2, 1,
-				0, 1, 2, 1, 0,
-				0, 0, 1, 0, 0,
+				1, 2, 1,
 			] )
 		},
 		function()
@@ -162,6 +162,211 @@ var D = document,
 				1, 1,
 				2, 2,
 				1, 1,
+			] )
+		},
+		function()
+		{
+			initMap( 5, 5,
+			[
+				0, 0, 1, 0, 0,
+				0, 1, 2, 1, 0,
+				1, 2, 1, 2, 1,
+				0, 1, 2, 1, 0,
+				0, 0, 1, 0, 0,
+			] )
+
+			initTarget( 3,
+			[
+				1, 1, 1,
+				2, 0, 2,
+				1, 1, 1,
+				2, 0, 2,
+				1, 1, 1,
+			] )
+		},
+		function()
+		{
+			initMap( 3, 4,
+			[
+				1, 2, 1,
+				0, 1, 0,
+				2, 0, 0,
+				0, 0, 2,
+			] )
+
+			initTarget( 3,
+			[
+				2, 1, 2,
+				1, 2, 1,
+			] )
+		},
+		function()
+		{
+			initMap( 3, 3,
+			[
+				0, 0, 1,
+				0, 1, 2,
+				1, 2, 1,
+			] )
+
+			initTarget( 3,
+			[
+				1, 2, 1,
+				2, 1, 0,
+				1, 0, 0,
+			] )
+		},
+		function()
+		{
+			initMap( 7, 5,
+			[
+				0, 2, 1, 1, 2, 1, 1,
+				0, 1, 2, 0, 1, 2, 0,
+				1, 2, 0, 0, 1, 2, 0,
+				0, 2, 2, 0, 1, 2, 0,
+				0, 2, 2, 2, 0, 0, 0,
+			] )
+
+			initTarget( 5,
+			[
+				1, 2, 1, 2, 1,
+				2, 0, 2, 0, 2,
+				1, 2, 1, 2, 1,
+				2, 0, 2, 0, 2,
+				1, 2, 1, 2, 1,
+			] )
+		},
+		function()
+		{
+			initMap( 5, 5,
+			[
+				1, 2, 0, 2, 1,
+				2, 1, 0, 1, 2,
+				0, 0, 0, 0, 0,
+				2, 1, 0, 1, 2,
+				1, 2, 0, 2, 1,
+			] )
+
+			initTarget( 4,
+			[
+				1, 1, 2, 2,
+				1, 1, 2, 2,
+				2, 2, 1, 1,
+				2, 2, 1, 1,
+			] )
+		},
+		function()
+		{
+			initMap( 5, 5,
+			[
+				1, 0, 0, 0, 2,
+				0, 1, 0, 2, 0,
+				0, 0, 1, 0, 0,
+				0, 2, 0, 1, 0,
+				2, 0, 0, 0, 1,
+			] )
+
+			initTarget( 3,
+			[
+				1, 2, 1,
+				2, 1, 2,
+				1, 2, 1,
+			] )
+		},
+		function()
+		{
+			initMap( 5, 3,
+			[
+				1, 2, 1, 2, 1,
+				0, 1, 2, 1, 0,
+				0, 0, 1, 0, 0,
+			] )
+
+			initTarget( 5,
+			[
+				0, 0, 1, 0, 0,
+				0, 1, 2, 1, 0,
+				1, 2, 1, 2, 1,
+			] )
+		},
+		function()
+		{
+			initMap( 5, 5,
+			[
+				0, 1, 0, 1, 0,
+				1, 2, 1, 0, 2,
+				2, 1, 2, 1, 0,
+				1, 2, 1, 0, 2,
+				0, 1, 0, 2, 2,
+			] )
+
+			initTarget( 5,
+			[
+				1, 0, 0, 0, 1,
+				2, 1, 0, 1, 2,
+				2, 2, 1, 2, 2,
+				2, 1, 0, 1, 2,
+				1, 0, 0, 0, 1,
+			] )
+		},
+		function()
+		{
+			initMap( 5, 5,
+			[
+				1, 0, 1, 0, 1,
+				0, 2, 0, 2, 0,
+				1, 0, 1, 0, 1,
+				0, 2, 0, 2, 0,
+				1, 0, 1, 0, 1,
+			] )
+
+			initTarget( 5,
+			[
+				0, 0, 1, 0, 0,
+				0, 1, 2, 1, 0,
+				1, 2, 1, 2, 1,
+				0, 1, 2, 1, 0,
+				0, 0, 1, 0, 0,
+			] )
+		},
+		function()
+		{
+			initMap( 6, 6,
+			[
+				1, 0, 2, 1, 0, 0,
+				0, 1, 0, 0, 2, 0,
+				2, 0, 1, 1, 0, 1,
+				1, 0, 1, 1, 0, 2,
+				0, 2, 0, 0, 1, 0,
+				0, 0, 1, 2, 0, 1,
+			] )
+
+			initTarget( 4,
+			[
+				1, 1, 1, 1,
+				1, 2, 2, 1,
+				0, 2, 2, 0,
+				1, 2, 2, 1,
+				1, 1, 1, 1,
+			] )
+		},
+		function()
+		{
+			initMap( 5, 5,
+			[
+				1, 2, 1, 0, 1,
+				2, 0, 2, 0, 2,
+				0, 1, 0, 1, 0,
+				2, 0, 2, 0, 2,
+				1, 0, 1, 2, 1,
+			] )
+
+			initTarget( 5,
+			[
+				1, 0, 1, 0, 1,
+				2, 1, 2, 1, 2,
+				1, 2, 1, 2, 1,
+				2, 0, 2, 0, 2,
 			] )
 		},
 	]
@@ -274,6 +479,11 @@ function run()
 	draw()
 }
 
+function loadLevel()
+{
+	levels[level % levels.length]()
+}
+
 function checkMap()
 {
 	var colMin = 999999999,
@@ -297,16 +507,25 @@ function checkMap()
 		if( tile.id < 1 )
 			continue
 
-		var offset =
-			(tile.row-rowMin)*targetCols+
-			(tile.col-colMin)
+		var col = tile.col-colMin
+
+		if( col >= targetCols )
+			return
+
+		var offset = (tile.row-rowMin)*targetCols+col
 
 		if( offset >= targetLength ||
 			target[offset] != tile.id )
 			return
 	}
 
-	levels[++level % levels.length]()
+	if( ++level >= levels.length )
+	{
+		D.write( "Beat." )
+		return
+	}
+
+	loadLevel()
 }
 
 function predictableRound( value )
@@ -618,7 +837,7 @@ function resize()
 	for( var id in sprites )
 		scale( sprites[id] )
 
-	levels[level]()
+	loadLevel()
 }
 
 function cacheUniformLocations( program )
@@ -832,7 +1051,7 @@ function init()
 
 	gl.enable( gl.BLEND )
 	gl.blendFunc( gl.ONE, gl.ONE_MINUS_SRC_ALPHA )
-	gl.clearColor( .4, .2, .3, 1 )
+	gl.clearColor( .1, .2, .3, 1 )
 
 	initBuffers( program )
 	cacheUniformLocations( program )
