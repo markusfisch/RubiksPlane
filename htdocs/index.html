@@ -134,6 +134,7 @@ var D = document,
 	targetY,
 	targetTileSize,
 	targetFactor,
+	moves = 0,
 	level = 0,
 	levels = [
 		function()
@@ -521,7 +522,7 @@ function checkMap()
 
 	if( ++level >= levels.length )
 	{
-		D.write( "Beat." )
+		D.write( "Beat in "+moves+" moves." )
 		return
 	}
 
@@ -540,30 +541,50 @@ function predictableRound( value )
 
 function lockCol( col )
 {
+	var change = false
+
 	for( var n = mapLength; n--; )
 	{
 		var tile = map[n]
 
 		if( tile.col == col )
 		{
-			tile.row = predictableRound( -tile.y/tileSize )
-			tile.y = tile.row*-tileSize
+			var old = tile.row,
+				row = predictableRound( -tile.y/tileSize )
+
+			if( old != row )
+				change = true
+
+			tile.row = row
+			tile.y = row*-tileSize
 		}
 	}
+
+	change && ++moves
 }
 
 function lockRow( row )
 {
+	var change = false
+
 	for( var n = mapLength; n--; )
 	{
 		var tile = map[n]
 
 		if( tile.row == row )
 		{
-			tile.col = predictableRound( tile.x/tileSize )
-			tile.x = tile.col*tileSize
+			var old = tile.col,
+				col = predictableRound( tile.x/tileSize )
+
+			if( old != col )
+				change = true
+
+			tile.col = col
+			tile.x = col*tileSize
 		}
 	}
+
+	change && ++moves
 }
 
 function shiftColBy( col, shift )
