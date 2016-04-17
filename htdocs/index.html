@@ -123,6 +123,10 @@ var D = document,
 	target,
 	targetLength,
 	targetCols,
+	targetX,
+	targetY,
+	targetTileSize,
+	targetFactor,
 	level = 0,
 	levels = [
 		function()
@@ -206,6 +210,29 @@ function drawSprite( sprite, x, y, wm, hm )
 	gl.drawArrays( gl.TRIANGLE_STRIP, 0, 4 )
 }
 
+function drawTarget()
+{
+	for( var offset = 0, y = targetY;
+		offset < targetLength;
+		y -= targetTileSize )
+		for( var col = 0, x = targetX;
+			col < targetCols;
+			++col, ++offset, x += targetTileSize )
+		{
+			var id = target[offset]
+
+			if( id < 1 )
+				continue
+
+			drawSprite(
+				sprites[id],
+				x,
+				y,
+				targetFactor,
+				targetFactor )
+		}
+}
+
 function drawMap()
 {
 	for( var n = mapLength; n--; )
@@ -233,6 +260,7 @@ function draw()
 	gl.useProgram( program )
 
 	drawMap()
+	drawTarget()
 }
 
 function run()
@@ -580,6 +608,12 @@ function resize()
 	horizonY = yMax+tileSize/2
 	shiftThresholdX = .005
 	shiftThresholdY = shiftThresholdX*yMax
+
+	var margin = tileSize*.4
+	targetX = -1+margin
+	targetY = yMax-margin
+	targetTileSize = tileSize*.25
+	targetFactor = targetTileSize/tileSize
 
 	for( var id in sprites )
 		scale( sprites[id] )
