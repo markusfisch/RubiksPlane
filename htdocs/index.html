@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width"/>
-<title>Rubik's Plane</title>
+<title>Shapeshifting Castle</title>
 <style>
 
 html,
@@ -59,14 +59,7 @@ uniform sampler2D texture;
 
 void main()
 {
-	vec4 color = texture2D( texture, textureUV.st ).rgba;
-
-	color = mix(
-		color,
-		vec4( .1, .2, .3, 1. ),
-		abs( sin( length( textureUV.st )*2048. )*.15 ) );
-
-	gl_FragColor = color;
+	gl_FragColor = texture2D( texture, textureUV.st ).rgba;
 }
 
 </script>
@@ -80,8 +73,52 @@ var D = document,
 	PERSPECTIVE = "perspective",
 	TRANSFORMATION = "transformation",
 	TEXTURE = "texture",
-	TILE_A = 1,
-	TILE_B = 2,
+	CBL = 1,
+	CBLI = 2,
+	CBR = 3,
+	CBRI = 4,
+	CTL = 5,
+	CTLI = 6,
+	CTR = 7,
+	CTRI = 8,
+	IC2B = 9,
+	IC2L = 10,
+	IC2R = 11,
+	IC2T = 12,
+	IC3BL = 13,
+	IC3BR = 14,
+	IC3TL = 15,
+	IC3TR = 16,
+	IC4 = 17,
+	ICBL = 18,
+	ICBR = 19,
+	ICTL = 20,
+	ICTR = 21,
+	PH = 22,
+	PV = 23,
+	UB = 24,
+	UL = 25,
+	UR = 26,
+	UT = 27,
+	WB = 28,
+	WBIC2T = 29,
+	WBICTL = 30,
+	WBICTR = 31,
+	WIZARD = 32,
+	WIZARD_MAGIC = 33,
+	WL = 34,
+	WLIC2R = 35,
+	WLICBR = 36,
+	WLICTR = 37,
+	WR = 38,
+	WRIC2L = 39,
+	WRICBL = 40,
+	WRICTL = 41,
+	WT = 42,
+	WTIC2B = 43,
+	WTICBL = 44,
+	WTICBR = 45,
+	FLOOR = 46,
 	atlas,
 	sprites = [],
 	canvas,
@@ -135,6 +172,8 @@ var D = document,
 	targetY,
 	targetTileSize,
 	targetFactor,
+	entityLength = 0,
+	entities = [],
 	moves = 0,
 	level = 0,
 	levels = [
@@ -142,83 +181,83 @@ var D = document,
 		{
 			initMap( 2, 2,
 			[
-				1, 0,
-				2, 1,
+				UL, 0,
+				PH, UR,
 			] )
 
 			initTarget( 3,
 			[
-				1, 2, 1,
+				UL, PH, UR,
 			] )
 		},
 		function()
 		{
 			initMap( 3, 2,
 			[
-				1, 2, 1,
-				1, 2, 1,
+				CBL, WL, CTR,
+				CTL, WR, CBR,
 			] )
 
 			initTarget( 2,
 			[
-				1, 1,
-				2, 2,
-				1, 1,
+				CTL, CTR,
+				WL, WR,
+				CBL, CBR
 			] )
 		},
 		function()
 		{
 			initMap( 5, 5,
 			[
-				0, 0, 1, 0, 0,
-				0, 1, 2, 1, 0,
-				1, 2, 1, 2, 1,
-				0, 1, 2, 1, 0,
-				0, 0, 1, 0, 0,
+				0, 0, CBRI, 0, 0,
+				0, PV, WLIC2R, PH, 0,
+				CTLI, PH, WRIC2L, PV, CTRI,
+				0, PV, PV, PH, 0,
+				0, 0, CBLI, 0, 0,
 			] )
 
 			initTarget( 3,
 			[
-				1, 1, 1,
-				2, 0, 2,
-				1, 1, 1,
-				2, 0, 2,
-				1, 1, 1,
+				CTLI, PH, CTRI,
+				PV, 0, PV,
+				WLIC2R, PH, WRIC2L,
+				PV, 0, PV,
+				CBLI, PH, CBRI,
 			] )
 		},
 		function()
 		{
 			initMap( 3, 4,
 			[
-				1, 2, 1,
-				0, 1, 0,
-				2, 0, 0,
-				0, 0, 2,
+				CBR, CTR, CTL,
+				0, WT, 0,
+				CBL, 0, 0,
+				0, 0, WB,
 			] )
 
 			initTarget( 3,
 			[
-				2, 1, 2,
-				1, 2, 1,
+				CTL, WT, CTR,
+				CBL, WB, CBR,
 			] )
 		},
 		function()
 		{
 			initMap( 3, 3,
 			[
-				0, 0, 1,
-				0, 1, 2,
-				1, 2, 1,
+				0, 0, UB,
+				0, CBR, WLICBR,
+				UR, WTICBR, CTL,
 			] )
 
 			initTarget( 3,
 			[
-				1, 2, 1,
-				2, 1, 0,
-				1, 0, 0,
+				CTL, WTICBR, UR,
+				WLICBR, CBR, 0,
+				UB, 0, 0,
 			] )
 		},
-		function()
+		/*function()
 		{
 			initMap( 7, 5,
 			[
@@ -370,7 +409,7 @@ var D = document,
 				1, 2, 1, 2, 1,
 				2, 0, 2, 0, 2,
 			] )
-		},
+		},*/
 	]
 
 function drawSprite( sprite, x, y, wm, hm )
@@ -440,6 +479,24 @@ function drawTarget()
 		}
 }
 
+function drawEntities()
+{
+	for( var n = entityLength; n--; )
+	{
+		var entity = entities[n]
+
+		if( entity.tile < 0 )
+			continue
+
+		var tile = map[entity.tile]
+
+		drawSprite(
+			entity.sprite,
+			mapX+tile.x,
+			mapY+tile.y )
+	}
+}
+
 function drawMap()
 {
 	var offsetY = mapY+displaceY
@@ -472,6 +529,7 @@ function draw()
 	gl.useProgram( program )
 
 	drawMap()
+	drawEntities()
 	drawTarget()
 }
 
@@ -761,6 +819,15 @@ function setKey( ev, pressed )
 {
 	var e = ev || event
 
+// DEBUG START
+	if( !pressed &&
+		e.keyCode == 32 )
+	{
+		++level;
+		loadLevel();
+	}
+// DEBUG STOP
+
 	keysDown[e.keyCode] = pressed
 
 	e.preventDefault()
@@ -816,6 +883,23 @@ function initMap( cols, rows, template )
 	mapY = -(rows-1)/2*-tileSize
 	mapCols = cols
 	mapRows = rows
+
+	var wizard = 0
+	for( var n = 0; n < mapLength; ++n )
+		if( map[n].id > 0 )
+		{
+			wizard = n
+			break
+		}
+
+	entities =
+	[
+		{
+			sprite: sprites[WIZARD],
+			tile: wizard
+		},
+	]
+	entityLength = entities.length
 }
 
 function scale( sprite )
@@ -847,7 +931,7 @@ function resize()
 
 	gl.viewport( 0, 0, width, height )
 
-	var ref = sprites[TILE_A].size
+	var ref = sprites[FLOOR].size
 	scaleFactor = .5/halfWidth*M.ceil( M.min( width, height )/8/ref )
 	tileSize = scaleFactor*2*ref
 	halfTileSize = tileSize*.5
@@ -892,8 +976,52 @@ function cacheUniformLocations( program )
 function calculateSpriteRects()
 {
 	var res = [
-			TILE_A, {/*tile_a*/x:38,y:2,w:32,h:32},
-			TILE_B, {/*tile_b*/x:2,y:2,w:32,h:32},
+			CBL, {/*cbl*/x:2,y:759,w:32,h:32},
+			CBLI, {/*cbli*/x:38,y:758,w:32,h:32},
+			CBR, {/*cbr*/x:2,y:723,w:32,h:32},
+			CBRI, {/*cbri*/x:38,y:722,w:32,h:32},
+			CTL, {/*ctl*/x:2,y:687,w:32,h:32},
+			CTLI, {/*ctli*/x:38,y:686,w:32,h:32},
+			CTR, {/*ctr*/x:2,y:651,w:32,h:32},
+			CTRI, {/*ctri*/x:38,y:650,w:32,h:32},
+			IC2B, {/*ic2b*/x:2,y:615,w:32,h:32},
+			IC2L, {/*ic2l*/x:38,y:614,w:32,h:32},
+			IC2R, {/*ic2r*/x:2,y:579,w:32,h:32},
+			IC2T, {/*ic2t*/x:38,y:578,w:32,h:32},
+			IC3BL, {/*ic3bl*/x:2,y:543,w:32,h:32},
+			IC3BR, {/*ic3br*/x:38,y:542,w:32,h:32},
+			IC3TL, {/*ic3tl*/x:2,y:507,w:32,h:32},
+			IC3TR, {/*ic3tr*/x:38,y:506,w:32,h:32},
+			IC4, {/*ic4*/x:2,y:471,w:32,h:32},
+			ICBL, {/*icbl*/x:38,y:470,w:32,h:32},
+			ICBR, {/*icbr*/x:2,y:435,w:32,h:32},
+			ICTL, {/*ictl*/x:38,y:434,w:32,h:32},
+			ICTR, {/*ictr*/x:2,y:399,w:32,h:32},
+			PH, {/*ph*/x:38,y:398,w:32,h:32},
+			PV, {/*pv*/x:2,y:363,w:32,h:32},
+			UB, {/*ub*/x:38,y:362,w:32,h:32},
+			UL, {/*ul*/x:2,y:327,w:32,h:32},
+			UR, {/*ur*/x:38,y:326,w:32,h:32},
+			UT, {/*ut*/x:2,y:291,w:32,h:32},
+			WB, {/*wb*/x:38,y:290,w:32,h:32},
+			WBIC2T, {/*wbic2t*/x:2,y:255,w:32,h:32},
+			WBICTL, {/*wbictl*/x:38,y:254,w:32,h:32},
+			WBICTR, {/*wbictr*/x:2,y:219,w:32,h:32},
+			WIZARD, {/*wizard*/x:2,y:795,w:13,h:16},
+			WIZARD_MAGIC, {/*wizardmagic*/x:38,y:794,w:19,h:18},
+			WL, {/*wl*/x:38,y:218,w:32,h:32},
+			WLIC2R, {/*wlic2r*/x:2,y:183,w:32,h:32},
+			WLICBR, {/*wlicbr*/x:38,y:182,w:32,h:32},
+			WLICTR, {/*wlictr*/x:2,y:147,w:32,h:32},
+			WR, {/*wr*/x:38,y:146,w:32,h:32},
+			WRIC2L, {/*wric2l*/x:2,y:111,w:32,h:32},
+			WRICBL, {/*wricbl*/x:38,y:110,w:32,h:32},
+			WRICTL, {/*wrictl*/x:2,y:75,w:32,h:32},
+			WT, {/*wt*/x:38,y:74,w:32,h:32},
+			WTIC2B, {/*wtic2b*/x:2,y:39,w:32,h:32},
+			WTICBL, {/*wticbl*/x:38,y:38,w:32,h:32},
+			WTICBR, {/*wticbr*/x:38,y:2,w:32,h:32},
+			FLOOR, {/*floor*/x:2,y:2,w:32,h:33},
 		],
 		positions = [],
 		xf = 1/atlas.width,
@@ -1079,7 +1207,7 @@ function init()
 
 	gl.enable( gl.BLEND )
 	gl.blendFunc( gl.ONE, gl.ONE_MINUS_SRC_ALPHA )
-	gl.clearColor( .1, .2, .3, 1 )
+	gl.clearColor( .15, .15, .15, 1 )
 
 	initBuffers( program )
 	cacheUniformLocations( program )
