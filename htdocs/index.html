@@ -2,24 +2,28 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
 <title>Rubik's Plane</title>
 <style>
-
-html,
-body
-{
+html, body {
 	margin: 0; padding: 0;
 	overflow: hidden;
+	-webkit-tap-highlight-color: rgba(0,0,0,0);
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	-khtml-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	-ms-touch-action: none;
+	user-select: none;
 }
-
-canvas
-{
+canvas {
 	position: fixed;
-	left: 0; right: 0;
-	top: 0; bottom: 0;
+	width: 100%;
+	height: 100%;
 }
-
 </style>
 </head>
 <body>
@@ -34,12 +38,11 @@ uniform mat3 transformation;
 
 varying vec2 textureUV;
 
-void main()
-{
+void main() {
 	gl_Position = vec4(
-		perspective*
-		transformation*
-		vec3( vertexPosition, 1. ), 1. );
+		perspective *
+		transformation *
+		vec3(vertexPosition, 1.), 1.);
 
 	textureUV = texturePosition;
 }
@@ -57,14 +60,13 @@ varying vec2 textureUV;
 
 uniform sampler2D texture;
 
-void main()
-{
-	vec4 color = texture2D( texture, textureUV.st ).rgba;
+void main() {
+	vec4 color = texture2D(texture, textureUV.st).rgba;
 
 	color = mix(
 		color,
-		vec4( .1, .2, .3, 1. ),
-		abs( sin( length( textureUV.st )*2048. )*.15 ) );
+		vec4(.1, .2, .3, 1.),
+		abs(sin(length(textureUV.st) * 2048.) * .15));
 
 	gl_FragColor = color;
 }
@@ -72,19 +74,18 @@ void main()
 </script>
 <script>
 
-"use strict"
+'use strict'
 
 var D = document,
 	M = Math,
 	W = window,
-	PERSPECTIVE = "perspective",
-	TRANSFORMATION = "transformation",
-	TEXTURE = "texture",
+	PERSPECTIVE = 'perspective',
+	TRANSFORMATION = 'transformation',
+	TEXTURE = 'texture',
 	TILE_A = 1,
 	TILE_B = 2,
 	atlas,
 	sprites = [],
-	canvas,
 	gl,
 	vertexPositionBuffer,
 	vertexPositionLoc,
@@ -138,508 +139,430 @@ var D = document,
 	moves = 0,
 	level = 0,
 	levels = [
-		function()
-		{
-			initMap( 2, 2,
-			[
+		function() {
+			initMap(2, 2, [
 				1, 0,
 				2, 1,
-			] )
+			])
 
-			initTarget( 3,
-			[
+			initTarget(3, [
 				1, 2, 1,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 3, 2,
-			[
+		function() {
+			initMap(3, 2, [
 				1, 2, 1,
 				1, 2, 1,
-			] )
+			])
 
-			initTarget( 2,
-			[
+			initTarget(2, [
 				1, 1,
 				2, 2,
 				1, 1,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 5, 5,
-			[
+		function() {
+			initMap(5, 5, [
 				0, 0, 1, 0, 0,
 				0, 1, 2, 1, 0,
 				1, 2, 1, 2, 1,
 				0, 1, 2, 1, 0,
 				0, 0, 1, 0, 0,
-			] )
+			])
 
-			initTarget( 3,
-			[
+			initTarget(3, [
 				1, 1, 1,
 				2, 0, 2,
 				1, 1, 1,
 				2, 0, 2,
 				1, 1, 1,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 3, 4,
-			[
+		function() {
+			initMap(3, 4, [
 				1, 2, 1,
 				0, 1, 0,
 				2, 0, 0,
 				0, 0, 2,
-			] )
+			])
 
-			initTarget( 3,
-			[
+			initTarget(3, [
 				2, 1, 2,
 				1, 2, 1,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 3, 3,
-			[
+		function() {
+			initMap(3, 3, [
 				0, 0, 1,
 				0, 1, 2,
 				1, 2, 1,
-			] )
+			])
 
-			initTarget( 3,
-			[
+			initTarget(3, [
 				1, 2, 1,
 				2, 1, 0,
 				1, 0, 0,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 7, 5,
-			[
+		function() {
+			initMap(7, 5, [
 				0, 2, 1, 1, 2, 1, 1,
 				0, 1, 2, 0, 1, 2, 0,
 				1, 2, 0, 0, 1, 2, 0,
 				0, 2, 2, 0, 1, 2, 0,
 				0, 2, 2, 2, 0, 0, 0,
-			] )
+			])
 
-			initTarget( 5,
-			[
+			initTarget(5, [
 				1, 2, 1, 2, 1,
 				2, 0, 2, 0, 2,
 				1, 2, 1, 2, 1,
 				2, 0, 2, 0, 2,
 				1, 2, 1, 2, 1,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 5, 5,
-			[
+		function() {
+			initMap(5, 5, [
 				1, 2, 0, 2, 1,
 				2, 1, 0, 1, 2,
 				0, 0, 0, 0, 0,
 				2, 1, 0, 1, 2,
 				1, 2, 0, 2, 1,
-			] )
+			])
 
-			initTarget( 4,
-			[
+			initTarget(4, [
 				1, 1, 2, 2,
 				1, 1, 2, 2,
 				2, 2, 1, 1,
 				2, 2, 1, 1,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 5, 5,
-			[
+		function() {
+			initMap(5, 5, [
 				1, 0, 0, 0, 2,
 				0, 1, 0, 2, 0,
 				0, 0, 1, 0, 0,
 				0, 2, 0, 1, 0,
 				2, 0, 0, 0, 1,
-			] )
+			])
 
-			initTarget( 3,
-			[
+			initTarget(3, [
 				1, 2, 1,
 				2, 1, 2,
 				1, 2, 1,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 5, 3,
-			[
+		function() {
+			initMap(5, 3, [
 				1, 2, 1, 2, 1,
 				0, 1, 2, 1, 0,
 				0, 0, 1, 0, 0,
-			] )
+			])
 
-			initTarget( 5,
-			[
+			initTarget(5, [
 				0, 0, 1, 0, 0,
 				0, 1, 2, 1, 0,
 				1, 2, 1, 2, 1,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 5, 5,
-			[
+		function() {
+			initMap(5, 5, [
 				0, 1, 0, 1, 0,
 				1, 2, 1, 0, 2,
 				2, 1, 2, 1, 0,
 				1, 2, 1, 0, 2,
 				0, 1, 0, 2, 2,
-			] )
+			])
 
-			initTarget( 5,
-			[
+			initTarget(5, [
 				1, 0, 0, 0, 1,
 				2, 1, 0, 1, 2,
 				2, 2, 1, 2, 2,
 				2, 1, 0, 1, 2,
 				1, 0, 0, 0, 1,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 5, 5,
-			[
+		function() {
+			initMap(5, 5, [
 				1, 0, 1, 0, 1,
 				0, 2, 0, 2, 0,
 				1, 0, 1, 0, 1,
 				0, 2, 0, 2, 0,
 				1, 0, 1, 0, 1,
-			] )
+			])
 
-			initTarget( 5,
-			[
+			initTarget(5, [
 				0, 0, 1, 0, 0,
 				0, 1, 2, 1, 0,
 				1, 2, 1, 2, 1,
 				0, 1, 2, 1, 0,
 				0, 0, 1, 0, 0,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 6, 6,
-			[
+		function() {
+			initMap(6, 6, [
 				1, 0, 2, 1, 0, 0,
 				0, 1, 0, 0, 2, 0,
 				2, 0, 1, 1, 0, 1,
 				1, 0, 1, 1, 0, 2,
 				0, 2, 0, 0, 1, 0,
 				0, 0, 1, 2, 0, 1,
-			] )
+			])
 
-			initTarget( 4,
-			[
+			initTarget(4, [
 				1, 1, 1, 1,
 				1, 2, 2, 1,
 				0, 2, 2, 0,
 				1, 2, 2, 1,
 				1, 1, 1, 1,
-			] )
+			])
 		},
-		function()
-		{
-			initMap( 5, 5,
-			[
+		function() {
+			initMap(5, 5, [
 				1, 2, 1, 0, 1,
 				2, 0, 2, 0, 2,
 				0, 1, 0, 1, 0,
 				2, 0, 2, 0, 2,
 				1, 0, 1, 2, 1,
-			] )
+			])
 
-			initTarget( 5,
-			[
+			initTarget(5, [
 				1, 0, 1, 0, 1,
 				2, 1, 2, 1, 2,
 				1, 2, 1, 2, 1,
 				2, 0, 2, 0, 2,
-			] )
+			])
 		},
 	]
 
-function drawSprite( sprite, x, y, wm, hm )
-{
-	gl.bindBuffer( gl.ARRAY_BUFFER, vertexPositionBuffer )
-	gl.vertexAttribPointer(
-		vertexPositionLoc,
-		2,
-		gl.FLOAT,
-		gl.FALSE,
-		0,
-		0 )
+function drawSprite(sprite, x, y, wm, hm) {
+	gl.bindBuffer(gl.ARRAY_BUFFER, texturePositionBuffer)
+	gl.vertexAttribPointer(texturePositionLoc, 2, gl.FLOAT, gl.FALSE, 0,
+		sprite.index << 5)
 
-	gl.bindBuffer( gl.ARRAY_BUFFER, texturePositionBuffer )
-	gl.vertexAttribPointer(
-		texturePositionLoc,
-		2,
-		gl.FLOAT,
-		gl.FALSE,
-		0,
-		sprite.index << 5 )
-
-	gl.uniformMatrix3fv(
-		program.uniforms[PERSPECTIVE],
-		gl.FALSE,
-		perspective )
-
-	transformation[0] =
-		transformation[8] = sprite.w*(wm || 1)
-	transformation[4] = sprite.h*(hm || 1)
+	transformation[0] = transformation[8] = sprite.w * (wm || 1)
+	transformation[4] = sprite.h * (hm || 1)
 
 	transformation[6] = x
 	transformation[7] = y
 
-	gl.uniformMatrix3fv(
-		program.uniforms[TRANSFORMATION],
-		gl.FALSE,
-		transformation )
+	gl.uniformMatrix3fv(program.uniforms[TRANSFORMATION], gl.FALSE,
+		transformation)
 
-	gl.activeTexture( gl.TEXTURE0 )
-	gl.bindTexture( gl.TEXTURE_2D, texture )
-	gl.uniform1i( program.uniforms[TEXTURE], 0 )
-
-	gl.drawArrays( gl.TRIANGLE_STRIP, 0, 4 )
+	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 }
 
-function drawTarget()
-{
-	for( var offset = 0, y = targetY;
-		offset < targetLength;
-		y -= targetTileSize )
-		for( var col = 0, x = targetX;
-			col < targetCols;
-			++col, ++offset, x += targetTileSize )
-		{
+function drawTarget() {
+	for (var offset = 0, y = targetY;
+			offset < targetLength;
+			y -= targetTileSize) {
+		for (var col = 0, x = targetX;
+				col < targetCols;
+				++col, ++offset, x += targetTileSize ) {
 			var id = target[offset]
 
-			if( id < 1 )
+			if (id < 1) {
 				continue
+			}
 
-			drawSprite(
-				sprites[id],
-				x,
-				y,
-				targetFactor,
-				targetFactor )
+			drawSprite(sprites[id], x, y, targetFactor, targetFactor)
 		}
-}
-
-function drawMap()
-{
-	var offsetY = mapY+displaceY
-
-	if( displaceY > 0 )
-		displaceY = M.max( 0, displaceY-displaceSpeed );
-
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n],
-			x = tile.x+mapX,
-			y = tile.y+offsetY
-
-		if( x < -horizonX ||
-			x > horizonX ||
-			y < -horizonY ||
-			y > horizonY )
-			continue
-
-		drawSprite( tile.sprite, x, y )
 	}
 }
 
-function draw()
-{
-	gl.clear(
-		gl.COLOR_BUFFER_BIT |
-		gl.DEPTH_BUFFER_BIT )
+function drawMap() {
+	var offsetY = mapY + displaceY
 
-	gl.useProgram( program )
+	if (displaceY > 0) {
+		displaceY = M.max(0, displaceY - displaceSpeed)
+	}
 
+	for (var i = mapLength; i--;) {
+		var tile = map[i],
+			x = tile.x + mapX,
+			y = tile.y + offsetY
+
+		if (x < -horizonX || x > horizonX || y < -horizonY || y > horizonY) {
+			continue
+		}
+
+		drawSprite(tile.sprite, x, y)
+	}
+}
+
+function initFrame() {
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+	gl.useProgram(program)
+
+	gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer)
+	gl.vertexAttribPointer(vertexPositionLoc, 2, gl.FLOAT, gl.FALSE, 0, 0)
+
+	gl.uniformMatrix3fv(program.uniforms[PERSPECTIVE], gl.FALSE, perspective)
+
+	gl.activeTexture(gl.TEXTURE0)
+	gl.bindTexture(gl.TEXTURE_2D, texture)
+	gl.uniform1i(program.uniforms[TEXTURE], 0)
+}
+
+function draw() {
+	initFrame()
 	drawMap()
 	drawTarget()
 }
 
-function run()
-{
-	requestAnimationFrame( run )
+function run() {
+	requestAnimationFrame(run)
 
 	now = Date.now()
-	factor = (now-last)/16
+	factor = (now - last) / 16
 	last = now
 
 	draw()
 }
 
-function loadLevel()
-{
+function loadLevel() {
 	displaceY = 1
 	levels[level % levels.length]()
 }
 
-function checkMap()
-{
+function checkMap() {
 	var colMin = 999999999,
 		rowMin = 999999999
 
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n]
+	for (var i = mapLength; i--;) {
+		var tile = map[i]
 
-		if( tile.id < 1 )
+		if (tile.id < 1) {
 			continue
+		}
 
-		colMin = M.min( tile.col, colMin )
-		rowMin = M.min( tile.row, rowMin )
+		colMin = M.min(tile.col, colMin)
+		rowMin = M.min(tile.row, rowMin)
 	}
 
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n]
+	for (var i = mapLength; i--;) {
+		var tile = map[i]
 
-		if( tile.id < 1 )
+		if (tile.id < 1) {
 			continue
+		}
 
-		var col = tile.col-colMin
+		var col = tile.col - colMin
 
-		if( col >= targetCols )
+		if (col >= targetCols) {
 			return
+		}
 
-		var offset = (tile.row-rowMin)*targetCols+col
+		var offset = (tile.row - rowMin) * targetCols + col
 
-		if( offset >= targetLength ||
-			target[offset] != tile.id )
+		if (offset >= targetLength || target[offset] != tile.id) {
 			return
+		}
 	}
 
-	if( ++level >= levels.length )
-	{
-		D.write( "Beat in "+moves+" moves." )
+	if (++level >= levels.length) {
+		D.write('Beat in ' + moves + ' moves.')
 		return
 	}
 
 	loadLevel()
 }
 
-function predictableRound( value )
-{
-	var f = M.abs( value-M.floor( value ) )
+function predictableRound(value) {
+	var f = M.abs(value - M.floor(value))
 
-	if( f > .4 && f < .6 )
+	if (f > .4 && f < .6) {
 		value += .1
+	}
 
-	return M.round( value )
+	return M.round(value)
 }
 
-function lockCol( col )
-{
+function lockCol(col) {
 	var change = false
 
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n]
+	for (var i = mapLength; i--;) {
+		var tile = map[i]
 
-		if( tile.col == col )
-		{
+		if (tile.col == col) {
 			var old = tile.row,
-				row = predictableRound( -tile.y/tileSize )
+				row = predictableRound(-tile.y / tileSize)
 
-			if( old != row )
+			if (old != row) {
 				change = true
+			}
 
 			tile.row = row
-			tile.y = row*-tileSize
+			tile.y = row * -tileSize
 		}
 	}
 
 	change && ++moves
 }
 
-function lockRow( row )
-{
+function lockRow(row) {
 	var change = false
 
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n]
+	for (var i = mapLength; i--;) {
+		var tile = map[i]
 
-		if( tile.row == row )
-		{
+		if (tile.row == row) {
 			var old = tile.col,
-				col = predictableRound( tile.x/tileSize )
+				col = predictableRound(tile.x / tileSize)
 
-			if( old != col )
+			if (old != col) {
 				change = true
+			}
 
 			tile.col = col
-			tile.x = col*tileSize
+			tile.x = col * tileSize
 		}
 	}
 
 	change && ++moves
 }
 
-function shiftColBy( col, shift )
-{
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n]
+function shiftColBy(col, shift) {
+	for (var i = mapLength; i--;) {
+		var tile = map[i]
 
-		if( tile.col == col )
+		if (tile.col == col) {
 			tile.y += shift
+		}
 	}
 }
 
-function shiftRowBy( row, shift )
-{
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n]
+function shiftRowBy(row, shift) {
+	for (var i = mapLength; i--;) {
+		var tile = map[i]
 
-		if( tile.row == row )
+		if (tile.row == row) {
 			tile.x += shift
+		}
 	}
 }
 
-function tileAt( x, y )
-{
-	for( var n = mapLength; n--; )
-	{
-		var tile = map[n],
+function tileAt(x, y) {
+	for (var i = mapLength; i--;) {
+		var tile = map[i],
 			dx = x-tile.x,
 			dy = y-tile.y
 
-		if( M.abs( dx ) < halfTileSize &&
-			M.abs( dy ) < halfTileSize )
+		if (M.abs(dx) < halfTileSize && M.abs(dy) < halfTileSize) {
 			return tile
+		}
 	}
 
 	return null
 }
 
-function stopShift()
-{
-	if( shifting )
-	{
-		if( shiftDirection )
-			lockRow( shiftRow )
-		else
-			lockCol( shiftCol )
+function stopShift() {
+	if (shifting) {
+		if (shiftDirection) {
+			lockRow(shiftRow)
+		} else {
+			lockCol(shiftCol)
+		}
 
 		checkMap()
 	}
@@ -648,117 +571,99 @@ function stopShift()
 	dragging = false
 }
 
-function shift( x, y )
-{
-	var dx = x-lastPointerX,
-		dy = y-lastPointerY
+function shift(x, y) {
+	var dx = x - lastPointerX,
+		dy = y - lastPointerY
 
-	if( M.abs( dx ) < shiftThresholdX &&
-		M.abs( dy ) < shiftThresholdY )
+	if (M.abs(dx) < shiftThresholdX && M.abs(dy) < shiftThresholdY) {
 		return
+	}
 
 	lastPointerX = x
 	lastPointerY = y
 
-	if( shifting )
-	{
-		if( shiftDirection < 0 )
-			shiftDirection = M.abs( dx ) > M.abs( dy )
+	if (shifting) {
+		if (shiftDirection < 0) {
+			shiftDirection = M.abs(dx) > M.abs(dy)
+		}
 
-		if( shiftDirection )
-			shiftRowBy( shiftRow, dx )
-		else
-			shiftColBy( shiftCol, dy )
+		if (shiftDirection) {
+			shiftRowBy(shiftRow, dx)
+		} else {
+			shiftColBy(shiftCol, dy)
+		}
 	}
-	else if( dragging )
-	{
+	else if (dragging) {
 		mapX += dx
 		mapY += dy
 	}
 }
 
-function startShift( x, y )
-{
-	var tile = tileAt( x-mapX, y-mapY )
+function startShift(x, y) {
+	var tile = tileAt(x - mapX, y - mapY)
 
 	lastPointerX = x
 	lastPointerY = y
 
-	if( tile )
-	{
+	if (tile) {
 		shiftCol = tile.col
 		shiftRow = tile.row
 		shiftDirection = -1
 		shifting = true
-	}
-	else
+	} else {
 		dragging = true
-}
-
-function pageXToGl( x )
-{
-	return (x-halfWidth)/halfWidth
-}
-
-function pageYToGl( y )
-{
-	return (halfHeight-y)/(halfHeight/yMax)
-}
-
-function setPointer( event, down )
-{
-	if( !down )
-	{
-		pointersLength = event.touches ?
-			event.touches.length :
-			0
 	}
-	else if( event.touches )
-	{
-		var touches = event.touches
+}
 
+function pageXToGl(x) {
+	return (x - halfWidth) / halfWidth
+}
+
+function pageYToGl(y) {
+	return (halfHeight - y) / (halfHeight / yMax)
+}
+
+function setPointer(event, down) {
+	if (!down) {
+		pointersLength = event.touches ? event.touches.length : 0
+	} else if(event.touches) {
+		var touches = event.touches
 		pointersLength = touches.length
 
-		for( var n = pointersLength; n--; )
-		{
-			var t = touches[n]
+		for (var i = pointersLength; i--;) {
+			var t = touches[i]
 
-			pointersX[n] = pageXToGl( t.pageX )
-			pointersY[n] = pageYToGl( t.pageY )
+			pointersX[i] = pageXToGl(t.pageX)
+			pointersY[i] = pageYToGl(t.pageY)
 		}
-	}
-	else
-	{
+	} else {
 		pointersLength = 1
-		pointersX[0] = pageXToGl( event.pageX )
-		pointersY[0] = pageYToGl( event.pageY )
+		pointersX[0] = pageXToGl(event.pageX)
+		pointersY[0] = pageYToGl(event.pageY)
 	}
 
 	event.preventDefault()
 }
 
-function pointerUp( event )
-{
+function pointerUp(event) {
 	stopShift()
-	setPointer( event, false )
+	setPointer(event, false)
 }
 
-function pointerMove( event )
-{
-	setPointer( event, pointersLength )
-	shift( pointersX[0], pointersY[0] )
+function pointerMove(event) {
+	setPointer(event, pointersLength)
+	shift(pointersX[0], pointersY[0])
 }
 
-function pointerDown( event )
-{
-	setPointer( event, true )
+function pointerDown(event) {
+	setPointer(event, true)
 
-	if( pointersLength == 1 )
-		startShift( pointersX[0], pointersY[0] )
+	if (pointersLength == 1) {
+		startShift(pointersX[0], pointersY[0])
+	}
 }
 
-function setKey( ev, pressed )
-{
+function setKey(ev, pressed) {
 	var e = ev || event
 
 	keysDown[e.keyCode] = pressed
@@ -767,37 +672,30 @@ function setKey( ev, pressed )
 	return false
 }
 
-function keyUp( ev )
-{
-	return setKey( ev, false )
+function keyUp(ev) {
+	return setKey(ev, false)
 }
 
-function keyDown( ev )
-{
-	return setKey( ev, true )
+function keyDown(ev) {
+	return setKey(ev, true)
 }
 
-function initTarget( cols, template )
-{
+function initTarget(cols, template) {
 	target = template
 	targetLength = template.length
 	targetCols = cols
 }
 
-function initMap( cols, rows, template )
-{
+function initMap(cols, rows, template) {
 	var offset = 0
 
-	for( var r = 0, y = 0; r < rows; ++r, y -= tileSize )
-		for( var c = 0, x = 0; c < cols; ++c, x += tileSize, ++offset )
-		{
+	for (var r = 0, y = 0; r < rows; ++r, y -= tileSize) {
+		for (var c = 0, x = 0; c < cols; ++c, x += tileSize, ++offset) {
 			var id = template[offset],
-				tile = id < 1 ?
-					{
+				tile = id < 1 ?  {
 						id: id,
 						x: -2
-					} :
-					{
+					} : {
 						id: id,
 						x: x,
 						y: y,
@@ -810,69 +708,73 @@ function initMap( cols, rows, template )
 
 			map[offset] = tile
 		}
+	}
 
-	mapLength = cols*rows
-	mapX = (cols-1)/2*-tileSize
-	mapY = -(rows-1)/2*-tileSize
+	mapLength = cols * rows
+	mapX = (cols - 1) / 2 * -tileSize
+	mapY = -(rows - 1) / 2 * -tileSize
 	mapCols = cols
 	mapRows = rows
 }
 
-function scale( sprite )
-{
-	var size = sprite.size*scaleFactor
+function scale(sprite) {
+	var size = sprite.size * scaleFactor
 
 	sprite.w = size
-	sprite.h = size*sprite.ratio
+	sprite.h = size * sprite.ratio
 }
 
-function resize()
-{
-	canvas.width = width = W.innerWidth
-	canvas.height = height = W.innerHeight
+function resize() {
+	width = gl.canvas.clientWidth
+	height = gl.canvas.clientHeight
+
+	gl.canvas.width = width
+	gl.canvas.height = height
+	gl.viewport(0, 0, width, height)
 
 	halfWidth = width >> 1
 	halfHeight = height >> 1
-	yMax = height/width
+	yMax = height / width
 
-	perspective = new Float32Array( [
+	perspective = new Float32Array([
 		1, 0, 0,
-		0, width/height, 0,
-		0, 0, 1] )
+		0, width / height, 0,
+		0, 0, 1
+	])
 
-	transformation = new Float32Array( [
+	transformation = new Float32Array([
 		1, 0, 0,
 		0, 1, 0,
-		0, 0, 1] )
-
-	gl.viewport( 0, 0, width, height )
+		0, 0, 1
+	])
 
 	var ref = sprites[TILE_A].size
-	scaleFactor = .5/halfWidth*M.ceil( M.min( width, height )/8/ref )
-	tileSize = scaleFactor*2*ref
-	halfTileSize = tileSize*.5
-	horizonX = 1+tileSize/2
-	horizonY = yMax+tileSize/2
+	scaleFactor = .5 / halfWidth * M.ceil(M.min(width, height) / 8 / ref)
+	tileSize = scaleFactor * 2 * ref
+	halfTileSize = tileSize * .5
+	horizonX = 1 + tileSize / 2
+	horizonY = yMax + tileSize / 2
 	shiftThresholdX = .005
-	shiftThresholdY = shiftThresholdX*yMax
-	displaceSpeed = tileSize*.3
+	shiftThresholdY = shiftThresholdX * yMax
+	displaceSpeed = tileSize * .3
 
-	var margin = tileSize*.4
-	targetX = -1+margin
-	targetY = yMax-margin
-	targetTileSize = tileSize*.25
-	targetFactor = targetTileSize/tileSize
+	var margin = tileSize * .4
+	targetX = -1 + margin
+	targetY = yMax - margin
+	targetTileSize = tileSize * .25
+	targetFactor = targetTileSize / tileSize
 
-	for( var id in sprites )
-		scale( sprites[id] )
+	for (var id in sprites) {
+		scale(sprites[id])
+	}
 
 	loadLevel()
 }
 
-function cacheUniformLocations( program )
-{
-	if( program.uniforms === undefined )
+function cacheUniformLocations(program) {
+	if (program.uniforms === undefined) {
 		program.uniforms = {}
+	}
 
 	var names = [
 		PERSPECTIVE,
@@ -880,43 +782,39 @@ function cacheUniformLocations( program )
 		TEXTURE,
 	]
 
-	for( var idx in names )
-	{
+	for (var idx in names) {
 		var name = names[idx]
-
-		program.uniforms[name] =
-			gl.getUniformLocation( program, name )
+		program.uniforms[name] = gl.getUniformLocation(program, name)
 	}
 }
 
-function calculateSpriteRects()
-{
+function calculateSpriteRects() {
 	var res = [
 			TILE_A, {/*tile_a*/x:38,y:2,w:32,h:32},
 			TILE_B, {/*tile_b*/x:2,y:2,w:32,h:32},
 		],
 		positions = [],
-		xf = 1/atlas.width,
-		yf = 1/atlas.height,
+		xf = 1 / atlas.width,
+		yf = 1 / atlas.height,
 		index = 0
 
-	for( var n = res.length; n > 0; )
-	{
-		var rc = res[--n],
-			id = res[--n],
+	for (var i = res.length; i > 0; ) {
+		var rc = res[--i],
+			id = res[--i],
 			x = rc.x,
 			y = rc.y,
 			w = rc.w,
 			h = rc.h,
-			l = xf*x,
-			t = yf*y,
-			r = xf*(x+w),
-			b = yf*(y+h)
+			l = xf * x,
+			t = yf * y,
+			r = xf * (x + w),
+			b = yf * (y + h)
 
 		sprites[id] = {
 			index: index++,
-			ratio: h/w,
-			size: w }
+			ratio: h / w,
+			size: w
+		}
 
 		/* TRIANGLE_STRIP order:
 		 *   A--C   A: x, y
@@ -927,108 +825,73 @@ function calculateSpriteRects()
 			l, t,
 			l, b,
 			r, t,
-			r, b )
+			r, b)
 	}
 
 	return positions
 }
 
-function initBuffers( program )
-{
+function initBuffers(program) {
 	vertexPositionBuffer = gl.createBuffer()
-	gl.bindBuffer( gl.ARRAY_BUFFER, vertexPositionBuffer )
-	gl.bufferData( gl.ARRAY_BUFFER,
-		new Float32Array( [
+	gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer)
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
 			-1, 1,
 			-1, -1,
 			1, 1,
-			1, -1] ),
-		gl.STATIC_DRAW )
+			1, -1
+		]), gl.STATIC_DRAW)
 
-	vertexPositionLoc = gl.getAttribLocation(
-		program,
-		"vertexPosition" )
-	gl.enableVertexAttribArray( vertexPositionLoc )
+	vertexPositionLoc = gl.getAttribLocation(program, 'vertexPosition')
+	gl.enableVertexAttribArray(vertexPositionLoc)
 
 	texturePositionBuffer = gl.createBuffer()
-	gl.bindBuffer( gl.ARRAY_BUFFER, texturePositionBuffer )
-	gl.bufferData(
-		gl.ARRAY_BUFFER,
-		new Float32Array( calculateSpriteRects() ),
-		gl.STATIC_DRAW )
+	gl.bindBuffer(gl.ARRAY_BUFFER, texturePositionBuffer)
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(calculateSpriteRects()),
+		gl.STATIC_DRAW)
 
-	texturePositionLoc = gl.getAttribLocation(
-		program,
-		"texturePosition" )
-	gl.enableVertexAttribArray( texturePositionLoc )
+	texturePositionLoc = gl.getAttribLocation(program, 'texturePosition')
+	gl.enableVertexAttribArray(texturePositionLoc)
 }
 
-function createTextureFrom( image )
-{
+function createTextureFrom(image) {
 	var t = gl.createTexture()
 
-	if( t < 1 )
+	if (t < 1) {
 		return
+	}
 
-	gl.bindTexture( gl.TEXTURE_2D, t )
+	gl.bindTexture(gl.TEXTURE_2D, t)
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
-	gl.texImage2D(
-		gl.TEXTURE_2D,
-		0,
-		gl.RGBA,
-		gl.RGBA,
-		gl.UNSIGNED_BYTE,
-		image )
-
-	gl.texParameteri(
-		gl.TEXTURE_2D,
-		gl.TEXTURE_MIN_FILTER,
-		gl.NEAREST )
-	gl.texParameteri(
-		gl.TEXTURE_2D,
-		gl.TEXTURE_MAG_FILTER,
-		gl.NEAREST )
-	gl.texParameteri(
-		gl.TEXTURE_2D,
-		gl.TEXTURE_WRAP_S,
-		gl.CLAMP_TO_EDGE )
-	gl.texParameteri(
-		gl.TEXTURE_2D,
-		gl.TEXTURE_WRAP_T,
-		gl.CLAMP_TO_EDGE )
-
-	gl.generateMipmap( gl.TEXTURE_2D )
-	gl.bindTexture( gl.TEXTURE_2D, null )
+	gl.generateMipmap(gl.TEXTURE_2D)
+	gl.bindTexture(gl.TEXTURE_2D, null)
 
 	return t
 }
 
-function compileShader( src, type )
-{
-	var shader = gl.createShader( type )
+function compileShader(src, type) {
+	var shader = gl.createShader(type)
 
-	gl.shaderSource( shader, src )
-	gl.compileShader( shader )
+	gl.shaderSource(shader, src)
+	gl.compileShader(shader)
 
-	return gl.getShaderParameter( shader, gl.COMPILE_STATUS ) ?
-		shader :
-		null
+	return gl.getShaderParameter(shader, gl.COMPILE_STATUS) ? shader : null
 }
 
-function linkProgram( vs, fs )
-{
+function linkProgram(vs, fs) {
 	var p
+	if ((p = gl.createProgram())) {
+		gl.attachShader(p, vs)
+		gl.attachShader(p, fs)
 
-	if( (p = gl.createProgram()) )
-	{
-		gl.attachShader( p, vs )
-		gl.attachShader( p, fs )
+		gl.linkProgram(p)
 
-		gl.linkProgram( p )
-
-		if( !gl.getProgramParameter( p, gl.LINK_STATUS ) )
-		{
-			gl.deleteProgram( p )
+		if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
+			gl.deleteProgram(p)
 			p = null
 		}
 	}
@@ -1036,53 +899,39 @@ function linkProgram( vs, fs )
 	return p
 }
 
-function buildProgram( vertexSource, fragmentSource )
-{
-	var p,
-		vs,
-		fs
-
-	if( (vs = compileShader(
-		vertexSource,
-		gl.VERTEX_SHADER )) )
-	{
-		if( (fs = compileShader(
-			fragmentSource,
-			gl.FRAGMENT_SHADER )) )
-		{
-			p = linkProgram( vs, fs )
-
-			gl.deleteShader( fs )
+function buildProgram(vertexSource, fragmentSource) {
+	var p, vs, fs
+	if ((vs = compileShader(vertexSource, gl.VERTEX_SHADER))) {
+		if ((fs = compileShader(fragmentSource, gl.FRAGMENT_SHADER))) {
+			p = linkProgram(vs, fs)
+			gl.deleteShader(fs)
 		}
 
-		gl.deleteShader( vs )
+		gl.deleteShader(vs)
 	}
 
 	return p
 }
 
-function init()
-{
-	if( !(canvas = D.getElementById( "Canvas" )) ||
-		(
-			!(gl = canvas.getContext( "webgl" )) &&
-			!(gl = canvas.getContext( "experimental-webgl" ))
-		) ||
-		!(program = buildProgram(
-			D.getElementById( "VertexShader" ).textContent,
-			D.getElementById( "FragmentShader" ).textContent )) ||
-		!(texture = createTextureFrom( atlas )) )
-	{
-		D.write( "Sorry, your browser cannot render this content." )
+function init() {
+	var canvas
+	if (!(canvas = D.getElementById('Canvas')) || (
+				!(gl = canvas.getContext('webgl')) &&
+				!(gl = canvas.getContext('experimental-webgl'))) ||
+			!(program = buildProgram(
+				D.getElementById('VertexShader').textContent,
+				D.getElementById('FragmentShader').textContent)) ||
+			!(texture = createTextureFrom(atlas))) {
+		D.write('Sorry, your browser cannot render this content.')
 		return
 	}
 
-	gl.enable( gl.BLEND )
-	gl.blendFunc( gl.ONE, gl.ONE_MINUS_SRC_ALPHA )
-	gl.clearColor( .1, .2, .3, 1 )
+	gl.enable(gl.BLEND)
+	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
+	gl.clearColor(.1, .2, .3, 1)
 
-	initBuffers( program )
-	cacheUniformLocations( program )
+	initBuffers(program)
+	cacheUniformLocations(program)
 
 	W.onresize = resize
 	resize()
@@ -1095,8 +944,7 @@ function init()
 	D.onmouseup = pointerUp
 	D.onmouseout = pointerUp
 
-	if( "ontouchstart" in D )
-	{
+	if ('ontouchstart' in D) {
 		D.ontouchstart = pointerDown
 		D.ontouchmove = pointerMove
 		D.ontouchend = pointerUp
@@ -1104,14 +952,13 @@ function init()
 		D.ontouchcancel = pointerUp
 	}
 
-	last = Date.now()-16
+	last = Date.now() - 16
 	run()
 }
 
-function load()
-{
+function load() {
 	atlas = new Image()
-	atlas.src = "atlas.png"
+	atlas.src = 'atlas.png'
 	atlas.onload = init
 }
 
