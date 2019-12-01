@@ -29,6 +29,11 @@ canvas {
 <body>
 <canvas id="Canvas">Sorry, your browser cannot render this content.</canvas>
 <script id="VertexShader" type="x-shader/x-vertex">
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
 
 attribute vec2 vertexPosition;
 attribute vec2 texturePosition;
@@ -36,52 +41,35 @@ attribute vec2 texturePosition;
 uniform mat3 perspective;
 uniform mat3 transformation;
 
-varying vec2 textureUV;
+varying vec2 st;
 
 void main() {
-	gl_Position = vec4(
-		perspective *
-		transformation *
+	gl_Position = vec4(perspective * transformation *
 		vec3(vertexPosition, 1.), 1.);
-
-	textureUV = texturePosition;
+	st = texturePosition;
 }
-
 </script>
 <script id="FragmentShader" type="x-shader/x-fragment">
-
 #ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
 #else
 precision mediump float;
 #endif
 
-varying vec2 textureUV;
+varying vec2 st;
 
 uniform sampler2D texture;
 
 void main() {
-	vec4 color = texture2D(texture, textureUV.st).rgba;
-
-	color = mix(
-		color,
-		vec4(.1, .2, .3, 1.),
-		abs(sin(length(textureUV.st) * 2048.) * .15));
-
-	gl_FragColor = color;
+	gl_FragColor = texture2D(texture, st);
 }
-
 </script>
 <script>
-
 'use strict'
 
 var D = document,
 	M = Math,
 	W = window,
-	PERSPECTIVE = 'perspective',
-	TRANSFORMATION = 'transformation',
-	TEXTURE = 'texture',
 	TILE_A = 1,
 	TILE_B = 2,
 	atlas,
@@ -91,8 +79,11 @@ var D = document,
 	vertexPositionLoc,
 	texturePositionBuffer,
 	texturePositionLoc,
+	perspectiveLoc,
 	perspective,
+	transformationLoc,
 	transformation,
+	textureLoc,
 	texture,
 	program,
 	width,
@@ -101,9 +92,6 @@ var D = document,
 	halfHeight,
 	yMax,
 	scaleFactor,
-	last,
-	now,
-	factor,
 	keysDown = [],
 	pointersLength = 0,
 	pointersX = [],
@@ -346,9 +334,7 @@ function drawSprite(sprite, x, y, wm, hm) {
 	transformation[6] = x
 	transformation[7] = y
 
-	gl.uniformMatrix3fv(program.uniforms[TRANSFORMATION], gl.FALSE,
-		transformation)
-
+	gl.uniformMatrix3fv(transformationLoc, gl.FALSE, transformation)
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 }
 
@@ -397,11 +383,11 @@ function initFrame() {
 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer)
 	gl.vertexAttribPointer(vertexPositionLoc, 2, gl.FLOAT, gl.FALSE, 0, 0)
 
-	gl.uniformMatrix3fv(program.uniforms[PERSPECTIVE], gl.FALSE, perspective)
+	gl.uniformMatrix3fv(perspectiveLoc, gl.FALSE, perspective)
 
 	gl.activeTexture(gl.TEXTURE0)
 	gl.bindTexture(gl.TEXTURE_2D, texture)
-	gl.uniform1i(program.uniforms[TEXTURE], 0)
+	gl.uniform1i(textureLoc, 0)
 }
 
 function draw() {
@@ -412,11 +398,6 @@ function draw() {
 
 function run() {
 	requestAnimationFrame(run)
-
-	now = Date.now()
-	factor = (now - last) / 16
-	last = now
-
 	draw()
 }
 
@@ -431,7 +412,6 @@ function checkMap() {
 
 	for (var i = mapLength; i--;) {
 		var tile = map[i]
-
 		if (tile.id < 1) {
 			continue
 		}
@@ -442,19 +422,16 @@ function checkMap() {
 
 	for (var i = mapLength; i--;) {
 		var tile = map[i]
-
 		if (tile.id < 1) {
 			continue
 		}
 
 		var col = tile.col - colMin
-
 		if (col >= targetCols) {
 			return
 		}
 
 		var offset = (tile.row - rowMin) * targetCols + col
-
 		if (offset >= targetLength || target[offset] != tile.id) {
 			return
 		}
@@ -470,11 +447,9 @@ function checkMap() {
 
 function predictableRound(value) {
 	var f = M.abs(value - M.floor(value))
-
 	if (f > .4 && f < .6) {
 		value += .1
 	}
-
 	return M.round(value)
 }
 
@@ -641,7 +616,6 @@ function setPointer(event, down) {
 		pointersX[0] = pageXToGl(event.pageX)
 		pointersY[0] = pageYToGl(event.pageY)
 	}
-
 	event.preventDefault()
 }
 
@@ -657,7 +631,6 @@ function pointerMove(event) {
 
 function pointerDown(event) {
 	setPointer(event, true)
-
 	if (pointersLength == 1) {
 		startShift(pointersX[0], pointersY[0])
 	}
@@ -665,9 +638,7 @@ function pointerDown(event) {
 
 function setKey(ev, pressed) {
 	var e = ev || event
-
 	keysDown[e.keyCode] = pressed
-
 	e.preventDefault()
 	return false
 }
@@ -678,6 +649,35 @@ function keyUp(ev) {
 
 function keyDown(ev) {
 	return setKey(ev, true)
+}
+
+function wireInputs() {
+	D.onkeydown = keyDown
+	D.onkeyup = keyUp
+
+	D.onmousedown = pointerDown
+	D.onmousemove = pointerMove
+	D.onmouseup = pointerUp
+	D.onmouseout = pointerUp
+
+	if ('ontouchstart' in D) {
+		D.ontouchstart = pointerDown
+		D.ontouchmove = pointerMove
+		D.ontouchend = pointerUp
+		D.ontouchleave = pointerUp
+		D.ontouchcancel = pointerUp
+
+		// prevent pinch/zoom on iOS 11
+		D.addEventListener('gesturestart', function(event) {
+			event.preventDefault()
+		}, false)
+		D.addEventListener('gesturechange', function(event) {
+			event.preventDefault()
+		}, false)
+		D.addEventListener('gestureend', function(event) {
+			event.preventDefault()
+		}, false)
+	}
 }
 
 function initTarget(cols, template) {
@@ -719,7 +719,6 @@ function initMap(cols, rows, template) {
 
 function scale(sprite) {
 	var size = sprite.size * scaleFactor
-
 	sprite.w = size
 	sprite.h = size * sprite.ratio
 }
@@ -772,20 +771,9 @@ function resize() {
 }
 
 function cacheUniformLocations(program) {
-	if (program.uniforms === undefined) {
-		program.uniforms = {}
-	}
-
-	var names = [
-		PERSPECTIVE,
-		TRANSFORMATION,
-		TEXTURE,
-	]
-
-	for (var idx in names) {
-		var name = names[idx]
-		program.uniforms[name] = gl.getUniformLocation(program, name)
-	}
+	perspectiveLoc = gl.getUniformLocation(program, 'perspective')
+	transformationLoc = gl.getUniformLocation(program, 'transformation')
+	textureLoc = gl.getUniformLocation(program, 'texture')
 }
 
 function calculateSpriteRects() {
@@ -835,11 +823,10 @@ function initBuffers(program) {
 	vertexPositionBuffer = gl.createBuffer()
 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer)
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-			-1, 1,
-			-1, -1,
-			1, 1,
-			1, -1
-		]), gl.STATIC_DRAW)
+		-1, 1,
+		-1, -1,
+		1, 1,
+		1, -1]), gl.STATIC_DRAW)
 
 	vertexPositionLoc = gl.getAttribLocation(program, 'vertexPosition')
 	gl.enableVertexAttribArray(vertexPositionLoc)
@@ -855,76 +842,43 @@ function initBuffers(program) {
 
 function createTextureFrom(image) {
 	var t = gl.createTexture()
-
 	if (t < 1) {
 		return
 	}
-
 	gl.bindTexture(gl.TEXTURE_2D, t)
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-
 	gl.generateMipmap(gl.TEXTURE_2D)
 	gl.bindTexture(gl.TEXTURE_2D, null)
-
 	return t
 }
 
-function compileShader(src, type) {
+function compileShader(type, src) {
 	var shader = gl.createShader(type)
-
 	gl.shaderSource(shader, src)
 	gl.compileShader(shader)
-
-	return gl.getShaderParameter(shader, gl.COMPILE_STATUS) ? shader : null
-}
-
-function linkProgram(vs, fs) {
-	var p
-	if ((p = gl.createProgram())) {
-		gl.attachShader(p, vs)
-		gl.attachShader(p, fs)
-
-		gl.linkProgram(p)
-
-		if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-			gl.deleteProgram(p)
-			p = null
-		}
+	if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+		throw gl.getShaderInfoLog(shader)
 	}
-
-	return p
-}
-
-function buildProgram(vertexSource, fragmentSource) {
-	var p, vs, fs
-	if ((vs = compileShader(vertexSource, gl.VERTEX_SHADER))) {
-		if ((fs = compileShader(fragmentSource, gl.FRAGMENT_SHADER))) {
-			p = linkProgram(vs, fs)
-			gl.deleteShader(fs)
-		}
-
-		gl.deleteShader(vs)
-	}
-
-	return p
+	return shader
 }
 
 function init() {
-	var canvas
-	if (!(canvas = D.getElementById('Canvas')) || (
-				!(gl = canvas.getContext('webgl')) &&
-				!(gl = canvas.getContext('experimental-webgl'))) ||
-			!(program = buildProgram(
-				D.getElementById('VertexShader').textContent,
-				D.getElementById('FragmentShader').textContent)) ||
-			!(texture = createTextureFrom(atlas))) {
-		D.write('Sorry, your browser cannot render this content.')
-		return
-	}
+	var canvas = D.getElementById('Canvas')
+	gl = canvas.getContext('webgl')
+
+	texture = createTextureFrom(atlas)
+
+	program = gl.createProgram()
+	gl.attachShader(program, compileShader(gl.VERTEX_SHADER,
+		D.getElementById('VertexShader').textContent))
+	gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER,
+		D.getElementById('FragmentShader').textContent))
+	gl.linkProgram(program)
+	gl.useProgram(program)
 
 	gl.enable(gl.BLEND)
 	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA)
@@ -935,24 +889,8 @@ function init() {
 
 	W.onresize = resize
 	resize()
+	wireInputs()
 
-	D.onkeydown = keyDown
-	D.onkeyup = keyUp
-
-	D.onmousedown = pointerDown
-	D.onmousemove = pointerMove
-	D.onmouseup = pointerUp
-	D.onmouseout = pointerUp
-
-	if ('ontouchstart' in D) {
-		D.ontouchstart = pointerDown
-		D.ontouchmove = pointerMove
-		D.ontouchend = pointerUp
-		D.ontouchleave = pointerUp
-		D.ontouchcancel = pointerUp
-	}
-
-	last = Date.now() - 16
 	run()
 }
 
@@ -963,7 +901,6 @@ function load() {
 }
 
 W.onload = load
-
 </script>
 </body>
 </html>
